@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Orosz szavak — RU → HU</title>
+  <style>
+    :root {
+      --bg: #f6f4ee; --card: #fffdf7; --ink: #2c2a26; --muted: #7c7a72;
+      --line: #e7e3d8; --accent: #2ea043; --accent-soft: #e8f6ec; --shadow: 0 2px 10px rgba(0,0,0,.05);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --bg: #1c1b18; --card: #262521; --ink: #efece4; --muted: #a3a096;
+        --line: #38352e; --accent: #4cc76a; --accent-soft: #22302510; --shadow: 0 2px 10px rgba(0,0,0,.3);
+      }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--ink);
+      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 22px 16px 60px; }
+    header h1 { font-size: 28px; margin: 6px 0 2px; }
+    header p { color: var(--muted); margin: 0 0 18px; }
+    .flag { font-size: 15px; }
+    .search { display: flex; align-items: center; gap: 8px; background: var(--card);
+      border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; box-shadow: var(--shadow); }
+    .search input { flex: 1; border: 0; background: transparent; font: inherit; color: var(--ink); outline: none; }
+    .clear { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; }
+    .lvl-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
+    .lvl-chip { border: 1px solid var(--line); background: var(--card); border-radius: 12px;
+      padding: 8px 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-width: 62px; }
+    .lvl-chip.sel { border-color: var(--accent); background: var(--accent-soft); }
+    .lvl-chip b { font-size: 15px; }
+    .lvl-chip span { font-size: 11px; color: var(--muted); }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
+    .tile { text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 14px;
+      padding: 12px 14px; cursor: pointer; box-shadow: var(--shadow); transition: transform .08s ease, border-color .12s; }
+    .tile:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .tile .ru { font-size: 18px; font-weight: 700; }
+    .tile .hu { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .tile .lv { font-size: 10px; font-weight: 800; color: var(--accent); }
+    .empty { text-align: center; color: var(--muted); padding: 40px 0; }
+    .count { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    /* Preview sheet */
+    .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center;
+      justify-content: center; padding: 16px; z-index: 10; }
+    .sheet { background: var(--card); border-radius: 20px; max-width: 420px; width: 100%; padding: 22px;
+      box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+    .sheet .word { font-size: 30px; font-weight: 800; }
+    .sheet .pos { font-size: 13px; color: var(--muted); }
+    .sheet .mean { font-size: 20px; color: var(--accent); font-weight: 700; margin: 8px 0 12px; }
+    .sheet .ex { background: var(--accent-soft); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
+    .sheet .ex .exru { font-size: 16px; }
+    .sheet .ex .exhu { font-size: 14px; color: var(--muted); margin-top: 4px; }
+    .sheet .close { margin-top: 16px; width: 100%; border: 0; background: var(--accent); color: #fff;
+      font: inherit; font-weight: 700; border-radius: 12px; padding: 11px; cursor: pointer; }
+    .badge { display: inline-block; font-size: 11px; font-weight: 800; color: #fff; background: var(--accent);
+      border-radius: 999px; padding: 1px 8px; vertical-align: middle; margin-left: 6px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <h1>Orosz szavak 🇷🇺</h1>
+      <p><span class="flag">🇷🇺 Orosz</span> → <span class="flag">🇭🇺 Magyar</span> · böngészd a szavakat szint szerint.</p>
+    </header>
+    <div class="search">
+      <span>🔎</span>
+      <input id="q" placeholder="Keresés (oroszul vagy magyarul)…" autocomplete="off" autocapitalize="none" spellcheck="false">
+      <button class="clear" id="clear" hidden>✕</button>
+    </div>
+    <div class="lvl-row" id="levels"></div>
+    <div class="count" id="count"></div>
+    <div id="list"></div>
+  </div>
+
+  <script src="data.js"></script>
+  <script>
+    const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
+    const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+    // Dedupe by the Russian word (keep the first occurrence).
+    const seen = new Set();
+    const WORDS = (window.RU_WORDS || []).filter((w) => { const k = w.ru.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
+    const strip = (s) => String(s).toLowerCase().replace(/ё/g, 'е').trim();
+
+    let level = 'all';
+    let query = '';
+
+    const el = (id) => document.getElementById(id);
+
+    function counts() {
+      const c = { all: WORDS.length };
+      for (const lv of LEVELS) c[lv] = WORDS.filter((w) => w.level === lv).length;
+      return c;
+    }
+    function renderLevels() {
+      const c = counts();
+      const chip = (lv, label) => `<button class="lvl-chip ${level === lv ? 'sel' : ''}" data-lv="${lv}"><b>${label}</b><span>${c[lv] || 0}</span></button>`;
+      el('levels').innerHTML = chip('all', 'Mind') + LEVELS.map((lv) => chip(lv, lv)).join('');
+      el('levels').querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { level = b.dataset.lv; render(); }));
+    }
+    function filtered() {
+      const q = strip(query);
+      return WORDS.filter((w) => (level === 'all' || w.level === level)
+        && (!q || strip(w.ru).includes(q) || strip(w.hu).includes(q)));
+    }
+    function render() {
+      renderLevels();
+      const rows = filtered();
+      el('count').textContent = `${rows.length} szó`;
+      if (!rows.length) { el('list').innerHTML = `<div class="empty">🤔 Nincs találat.</div>`; return; }
+      el('list').innerHTML = `<div class="grid">${rows.map((w, i) => `
+        <button class="tile" data-i="${WORDS.indexOf(w)}">
+          <span class="lv">${esc(w.level)}</span>
+          <div class="ru">${esc(w.ru)}</div>
+          <div class="hu">${esc(w.hu)}</div>
+        </button>`).join('')}</div>`;
+      el('list').querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => openWord(WORDS[Number(b.dataset.i)])));
+    }
+    function openWord(w) {
+      if (!w) return;
+      const ex = w.ex ? `<div class="ex"><div class="exru">„${esc(w.ex)}"</div>${w.exHu ? `<div class="exhu">${esc(w.exHu)}</div>` : ''}</div>` : '';
+      const ov = document.createElement('div');
+      ov.className = 'overlay';
+      ov.innerHTML = `<div class="sheet">
+        <div class="word">${esc(w.ru)}<span class="badge">${esc(w.level)}</span></div>
+        <div class="pos">${esc(w.pos || '')}</div>
+        <div class="mean">${esc(w.hu)}</div>
+        ${ex}
+        <button class="close">Bezár</button>
+      </div>`;
+      ov.addEventListener('click', (e) => { if (e.target === ov || e.target.classList.contains('close')) ov.remove(); });
+      document.body.appendChild(ov);
+    }
+
+    el('q').addEventListener('input', (e) => { query = e.target.value; el('clear').hidden = !query; render(); });
+    el('clear').addEventListener('click', () => { query = ''; el('q').value = ''; el('clear').hidden = true; render(); el('q').focus(); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const ov = document.querySelector('.overlay'); if (ov) ov.remove(); } });
+
+    render();
+  </script>
+</body>
+</html>
