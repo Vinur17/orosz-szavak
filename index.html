@@ -124,7 +124,7 @@
   </div></div>
   <div class="wrap" id="app"></div>
 
-  <script src="data.js"></script>
+  <script src="data.js?v=3"></script>
   <script>
     // ---------- helpers ----------
     const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -146,8 +146,12 @@
     function setWord(ru, patch) { PROG[ru] = { ...(PROG[ru] || { status: 'untouched', stages: [] }), ...patch }; saveProg(); }
 
     // ---------- state ----------
+    let sLevel0 = 'all';
+    try { sLevel0 = localStorage.getItem('ru_slevel') || 'all'; } catch {}
     const state = { tab: 'learn', wLevel: 'all', wQuery: '', groupDetail: null,
-      study: null }; // study: { queue:[ru], i, flipped, stage, answered, session }
+      sLevel: sLevel0, // which level the study session draws from ('all' or A1..C2)
+      study: null };
+    function setStudyLevel(lv) { state.sLevel = lv; try { localStorage.setItem('ru_slevel', lv); } catch {} buildStudy(); }
 
     const $app = document.getElementById('app');
     const $tabs = document.getElementById('tabs');
@@ -162,13 +166,17 @@
       return left.length ? left[Math.floor(Math.random() * left.length)] : 'choose';
     }
     function buildStudy(pool) {
-      // pool: array of ru (defaults to all not-known, A1->C2 order)
-      let list = pool || WORDS.filter((w) => statusOf(w.ru) !== 'known')
+      // pool: array of ru for a GROUP session (studies exactly those, any level);
+      // otherwise a normal session drawn from the chosen study level (state.sLevel).
+      const group = !!pool;
+      let base;
+      if (group) base = pool;
+      else base = WORDS.filter((w) => state.sLevel === 'all' || w.level === state.sLevel)
         .sort((a, b) => LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level)).map((w) => w.ru);
-      list = list.filter((ru) => statusOf(ru) !== 'known').slice(0, 12);
+      const list = base.filter((ru) => BY_RU[ru] && statusOf(ru) !== 'known').slice(0, 12);
       // Dynamic queue: the front word is shown; unfinished words rotate to the back
       // and come round again (so each word gets its intro, then its 2 exercises).
-      state.study = { queue: list, total: list.length, learned: 0, flipped: false, answered: null };
+      state.study = { queue: list, total: list.length, learned: 0, flipped: false, answered: null, group };
       render();
     }
     function studyDone() { return !state.study || state.study.queue.length === 0; }
@@ -263,18 +271,32 @@
       $app.querySelectorAll('[data-ru]').forEach((b) => b.addEventListener('click', () => openWord(BY_RU[b.dataset.ru])));
     }
 
+    function studyLevelBar() {
+      const c = counts(WORDS);
+      const label = state.sLevel === 'all' ? 'Melyik szintet tanulod?' : `Szint: ${state.sLevel}`;
+      const chip = (lv, l) => `<button class="lvl-chip ${state.sLevel === lv ? 'sel' : ''}" data-slv="${lv}"><b>${l}</b><span>${c[lv] || 0}</span></button>`;
+      return `<div class="count" style="margin-bottom:2px">${label}</div><div class="lvl-row" style="margin-top:0">${chip('all', 'Mind') + LEVELS.map((lv) => chip(lv, lv)).join('')}</div>`;
+    }
+    function bindStudyLevel() {
+      $app.querySelectorAll('[data-slv]').forEach((b) => b.addEventListener('click', () => setStudyLevel(b.dataset.slv)));
+    }
     function renderLearn() {
       if (!state.study) { buildStudy(); return; }
+      const bar = state.study.group ? '' : studyLevelBar();
       if (studyDone()) {
-        $app.innerHTML = `<div class="study"><div class="empty"><div class="big">🎉</div><p>Kész! Szép munka.</p>
+        const msg = state.study.total === 0
+          ? (state.sLevel === 'all' ? 'Minden szót megtanultál! 🎉' : `Ezen a szinten (${state.sLevel}) minden szót tudsz. Válassz másik szintet.`)
+          : 'Kész! Szép munka.';
+        $app.innerHTML = `<div class="study">${bar}<div class="empty"><div class="big">🎉</div><p>${msg}</p>
           <button class="btn" id="again" style="margin-top:14px">Új kör</button></div></div>`;
         document.getElementById('again').addEventListener('click', () => buildStudy());
+        bindStudyLevel();
         return;
       }
       const s = state.study; const ru = curRu(); const w = BY_RU[ru];
       const stage = s.answered ? s.answered.stage : pickStage(ru); // keep the answered card visible
       const p = PROG[ru]; const done = (p?.stages || []).filter((x) => EX.includes(x)).length;
-      const head = `<div class="prog">
+      const head = `${bar}<div class="prog">
         <span>📚 ${s.learned} / ${s.total}</span>
         <span class="chip">${stage === 'flashcard' ? 'új szó' : done + '/2'}</span></div>`;
       let body = '';
@@ -301,6 +323,7 @@
           <div class="q">${prompt}</div><div class="opts">${opts}</div></div>`;
       }
       $app.innerHTML = `<div class="study">${head}${body}</div>`;
+      if (!s.group) bindStudyLevel();
       if (stage === 'flashcard') {
         $app.querySelectorAll('[data-flip]').forEach((el) => el.addEventListener('click', (e) => { if (e.target.closest('button')) return; s.flipped = !s.flipped; document.getElementById('flip').classList.toggle('is-flipped', s.flipped); }));
         const kb = document.getElementById('know'); if (kb) kb.addEventListener('click', () => decide(false));
