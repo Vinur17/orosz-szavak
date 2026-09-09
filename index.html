@@ -3,140 +3,369 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Orosz szavak — RU → HU</title>
+  <title>Orosz — RU → HU</title>
   <style>
     :root {
       --bg: #f6f4ee; --card: #fffdf7; --ink: #2c2a26; --muted: #7c7a72;
-      --line: #e7e3d8; --accent: #2ea043; --accent-soft: #e8f6ec; --shadow: 0 2px 10px rgba(0,0,0,.05);
+      --line: #e7e3d8; --accent: #2ea043; --accent-d: #268a3a; --accent-soft: #e8f6ec;
+      --shadow: 0 2px 10px rgba(0,0,0,.05);
+      --new: #7c5cff; --learning: #2f80ed; --known: #2ea043; --untouched: #b8b4a8;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
         --bg: #1c1b18; --card: #262521; --ink: #efece4; --muted: #a3a096;
-        --line: #38352e; --accent: #4cc76a; --accent-soft: #22302510; --shadow: 0 2px 10px rgba(0,0,0,.3);
+        --line: #38352e; --accent: #4cc76a; --accent-d: #3ab057; --accent-soft: #1f2b22;
+        --shadow: 0 2px 10px rgba(0,0,0,.3); --untouched: #4a4740;
       }
     }
     * { box-sizing: border-box; }
-    body { margin: 0; background: var(--bg); color: var(--ink);
+    body { margin: 0; background: var(--bg); color: var(--ink); overflow-x: hidden;
       font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 22px 16px 60px; }
-    header h1 { font-size: 28px; margin: 6px 0 2px; }
-    header p { color: var(--muted); margin: 0 0 18px; }
-    .flag { font-size: 15px; }
+    .nav { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent);
+      backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
+    .nav-in { max-width: 760px; margin: 0 auto; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
+    .logo { font-weight: 800; font-size: 17px; white-space: nowrap; }
+    .tabs { display: flex; gap: 2px; margin-left: auto; }
+    .tab { border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600;
+      padding: 7px 11px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
+    .tab.sel { background: var(--accent-soft); color: var(--accent-d); }
+    .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 70px; }
+    h1 { font-size: 26px; margin: 4px 0 2px; }
+    .sub { color: var(--muted); margin: 0 0 16px; }
+    .btn { border: 0; background: var(--accent); color: #fff; font: inherit; font-weight: 700;
+      border-radius: 12px; padding: 11px 16px; cursor: pointer; }
+    .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+    .btn:disabled { opacity: .5; cursor: default; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); }
     .search { display: flex; align-items: center; gap: 8px; background: var(--card);
       border: 1px solid var(--line); border-radius: 14px; padding: 10px 14px; box-shadow: var(--shadow); }
     .search input { flex: 1; border: 0; background: transparent; font: inherit; color: var(--ink); outline: none; }
     .clear { border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 16px; }
     .lvl-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 8px; }
     .lvl-chip { border: 1px solid var(--line); background: var(--card); border-radius: 12px;
-      padding: 8px 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-width: 62px; }
+      padding: 7px 12px; cursor: pointer; display: flex; flex-direction: column; align-items: center; min-width: 58px; }
     .lvl-chip.sel { border-color: var(--accent); background: var(--accent-soft); }
-    .lvl-chip b { font-size: 15px; }
-    .lvl-chip span { font-size: 11px; color: var(--muted); }
-    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 14px; }
-    .tile { text-align: left; border: 1px solid var(--line); background: var(--card); border-radius: 14px;
-      padding: 12px 14px; cursor: pointer; box-shadow: var(--shadow); transition: transform .08s ease, border-color .12s; }
-    .tile:hover { transform: translateY(-2px); border-color: var(--accent); }
+    .lvl-chip b { font-size: 14px; } .lvl-chip span { font-size: 11px; color: var(--muted); }
+    .count { color: var(--muted); font-size: 13px; margin: 6px 0; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+    .tile { position: relative; text-align: left; border: 1px solid var(--line); background: var(--card);
+      border-radius: 14px; padding: 12px 14px; cursor: pointer; box-shadow: var(--shadow);
+      transition: transform .08s ease, border-color .12s; border-left-width: 5px; }
+    .tile:hover { transform: translateY(-2px); }
+    .tile.known { border-left-color: var(--known); } .tile.learning { border-left-color: var(--learning); }
+    .tile.new { border-left-color: var(--new); } .tile.untouched { border-left-color: var(--untouched); }
     .tile .ru { font-size: 18px; font-weight: 700; }
     .tile .hu { font-size: 13px; color: var(--muted); margin-top: 2px; }
-    .tile .lv { font-size: 10px; font-weight: 800; color: var(--accent); }
+    .tile .lv { font-size: 10px; font-weight: 800; color: var(--accent-d); }
+    .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin: 10px 0; }
+    .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
     .empty { text-align: center; color: var(--muted); padding: 40px 0; }
-    .count { color: var(--muted); font-size: 13px; margin-top: 6px; }
+    .big { font-size: 46px; }
+    /* Groups */
+    .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-top: 10px; }
+    .gcard { display: flex; align-items: center; gap: 12px; text-align: left; border: 1px solid var(--line);
+      background: var(--card); border-radius: 16px; padding: 14px; cursor: pointer; box-shadow: var(--shadow); }
+    .gcard:hover { border-color: var(--accent); }
+    .gic { font-size: 26px; } .gcard b { display: block; } .gcard small { color: var(--muted); }
+    .sec-h { font-weight: 800; margin: 20px 0 6px; }
+    .link { color: var(--accent-d); font-weight: 700; cursor: pointer; }
+    /* Study */
+    .study { max-width: 460px; margin: 0 auto; }
+    .prog { display: flex; align-items: center; justify-content: space-between; color: var(--muted);
+      font-size: 13px; margin-bottom: 10px; }
+    .back-arrow { border: 0; background: var(--card); border: 1px solid var(--line); width: 30px; height: 30px;
+      border-radius: 9px; cursor: pointer; font-size: 16px; color: var(--ink); }
+    .chip { background: var(--accent-soft); color: var(--accent-d); border-radius: 999px; padding: 2px 10px; font-weight: 700; font-size: 12px; }
+    .flip { perspective: 1200px; }
+    .flip-in { position: relative; transition: transform .5s; transform-style: preserve-3d; }
+    .flip.is-flipped .flip-in { transform: rotateY(180deg); }
+    .face { backface-visibility: hidden; }
+    .face.back { position: absolute; inset: 0; transform: rotateY(180deg); }
+    .scard { border: 1px solid var(--line); background: var(--card); border-radius: 20px; padding: 26px 22px;
+      box-shadow: var(--shadow); text-align: center; min-height: 180px; display: flex; flex-direction: column; justify-content: center; }
+    .scard .word { font-size: 40px; font-weight: 800; }
+    .scard .pos { color: var(--muted); font-size: 13px; margin-top: 4px; }
+    .scard .mean { font-size: 24px; color: var(--accent-d); font-weight: 700; }
+    .scard .ex { background: var(--accent-soft); border-radius: 12px; padding: 10px 12px; margin-top: 14px; font-size: 15px; }
+    .scard .ex .exhu { color: var(--muted); font-size: 13px; margin-top: 3px; }
+    .hint { color: var(--muted); font-style: italic; font-size: 13px; margin-top: 12px; }
+    .decide { display: flex; justify-content: space-between; font-size: 12.5px; font-weight: 700; color: var(--muted); margin-top: 12px; }
+    .decide .learn { color: var(--accent-d); }
+    .q { font-weight: 700; margin-bottom: 12px; text-align: center; }
+    .opts { display: grid; gap: 10px; }
+    .opt { border: 1px solid var(--line); background: var(--card); border-radius: 12px; padding: 13px; font: inherit;
+      cursor: pointer; text-align: center; }
+    .opt:hover { border-color: var(--accent); }
+    .opt.correct { border-color: var(--known); background: var(--accent-soft); }
+    .opt.wrong { border-color: #e5393e; background: #fdecec; }
+    .actions { display: flex; gap: 10px; margin-top: 16px; }
+    .actions .btn { flex: 1; }
     /* Preview sheet */
     .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: flex; align-items: center;
-      justify-content: center; padding: 16px; z-index: 10; }
-    .sheet { background: var(--card); border-radius: 20px; max-width: 420px; width: 100%; padding: 22px;
-      box-shadow: 0 12px 40px rgba(0,0,0,.25); }
+      justify-content: center; padding: 16px; z-index: 20; }
+    .sheet { background: var(--card); border-radius: 20px; max-width: 420px; width: 100%; padding: 22px; box-shadow: 0 12px 40px rgba(0,0,0,.25); }
     .sheet .word { font-size: 30px; font-weight: 800; }
-    .sheet .pos { font-size: 13px; color: var(--muted); }
-    .sheet .mean { font-size: 20px; color: var(--accent); font-weight: 700; margin: 8px 0 12px; }
-    .sheet .ex { background: var(--accent-soft); border: 1px dashed var(--line); border-radius: 12px; padding: 10px 12px; }
-    .sheet .ex .exru { font-size: 16px; }
-    .sheet .ex .exhu { font-size: 14px; color: var(--muted); margin-top: 4px; }
-    .sheet .close { margin-top: 16px; width: 100%; border: 0; background: var(--accent); color: #fff;
-      font: inherit; font-weight: 700; border-radius: 12px; padding: 11px; cursor: pointer; }
+    .sheet .mean { font-size: 20px; color: var(--accent-d); font-weight: 700; margin: 8px 0 12px; }
     .badge { display: inline-block; font-size: 11px; font-weight: 800; color: #fff; background: var(--accent);
       border-radius: 999px; padding: 1px 8px; vertical-align: middle; margin-left: 6px; }
+    /* Swipe overlay */
+    .swipe-ind { position: absolute; inset: 0; border-radius: 20px; opacity: 0; pointer-events: none;
+      display: flex; flex-direction: column; gap: 6px; align-items: center; justify-content: center; overflow: hidden; }
+    .swipe-ico { font-size: 74px; color: #fff; filter: drop-shadow(0 3px 10px rgba(0,0,0,.4)); }
+    .swipe-cap { font-size: 18px; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.45); }
+    .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: var(--accent);
+      color: #fff; font-weight: 700; padding: 10px 16px; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.25); z-index: 30; }
   </style>
 </head>
 <body>
-  <div class="wrap">
-    <header>
-      <h1>Orosz szavak 🇷🇺</h1>
-      <p><span class="flag">🇷🇺 Orosz</span> → <span class="flag">🇭🇺 Magyar</span> · böngészd a szavakat szint szerint.</p>
-    </header>
-    <div class="search">
-      <span>🔎</span>
-      <input id="q" placeholder="Keresés (oroszul vagy magyarul)…" autocomplete="off" autocapitalize="none" spellcheck="false">
-      <button class="clear" id="clear" hidden>✕</button>
-    </div>
-    <div class="lvl-row" id="levels"></div>
-    <div class="count" id="count"></div>
-    <div id="list"></div>
-  </div>
+  <div class="nav"><div class="nav-in">
+    <span class="logo">🇷🇺 Orosz</span>
+    <div class="tabs" id="tabs"></div>
+  </div></div>
+  <div class="wrap" id="app"></div>
 
   <script src="data.js"></script>
   <script>
+    // ---------- helpers ----------
     const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
     const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    // Dedupe by the Russian word (keep the first occurrence).
-    const seen = new Set();
-    const WORDS = (window.RU_WORDS || []).filter((w) => { const k = w.ru.toLowerCase(); if (seen.has(k)) return false; seen.add(k); return true; });
     const strip = (s) => String(s).toLowerCase().replace(/ё/g, 'е').trim();
+    const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
-    let level = 'all';
-    let query = '';
+    const seen = new Set();
+    const WORDS = (window.RU_WORDS || []).filter((w) => { const k = strip(w.ru); if (seen.has(k)) return false; seen.add(k); return true; });
+    const BY_RU = Object.fromEntries(WORDS.map((w) => [w.ru, w]));
+    const GROUPS = window.RU_GROUPS || [];
 
-    const el = (id) => document.getElementById(id);
+    // ---------- progress (localStorage) ----------
+    const PKEY = 'ru_progress_v1';
+    let PROG = {};
+    try { PROG = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch { PROG = {}; }
+    function saveProg() { try { localStorage.setItem(PKEY, JSON.stringify(PROG)); } catch {} }
+    const statusOf = (ru) => (PROG[ru]?.status || 'untouched');
+    function setWord(ru, patch) { PROG[ru] = { ...(PROG[ru] || { status: 'untouched', stages: [] }), ...patch }; saveProg(); }
 
-    function counts() {
-      const c = { all: WORDS.length };
-      for (const lv of LEVELS) c[lv] = WORDS.filter((w) => w.level === lv).length;
-      return c;
+    // ---------- state ----------
+    const state = { tab: 'learn', wLevel: 'all', wQuery: '', groupDetail: null,
+      study: null }; // study: { queue:[ru], i, flipped, stage, answered, session }
+
+    const $app = document.getElementById('app');
+    const $tabs = document.getElementById('tabs');
+
+    // ---------- study engine ----------
+    const EX = ['choose', 'reverse']; // both must pass -> known
+    function pickStage(ru) {
+      const p = PROG[ru];
+      if (!p || p.status === 'untouched' || (p.status === 'new' && !(p.stages || []).includes('intro'))) return 'flashcard';
+      const done = p.stages || [];
+      const left = EX.filter((e) => !done.includes(e));
+      return left.length ? left[Math.floor(Math.random() * left.length)] : 'choose';
     }
-    function renderLevels() {
-      const c = counts();
-      const chip = (lv, label) => `<button class="lvl-chip ${level === lv ? 'sel' : ''}" data-lv="${lv}"><b>${label}</b><span>${c[lv] || 0}</span></button>`;
-      el('levels').innerHTML = chip('all', 'Mind') + LEVELS.map((lv) => chip(lv, lv)).join('');
-      el('levels').querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { level = b.dataset.lv; render(); }));
+    function buildStudy(pool) {
+      // pool: array of ru (defaults to all not-known, A1->C2 order)
+      let list = pool || WORDS.filter((w) => statusOf(w.ru) !== 'known')
+        .sort((a, b) => LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level)).map((w) => w.ru);
+      list = list.filter((ru) => statusOf(ru) !== 'known').slice(0, 12);
+      // Dynamic queue: the front word is shown; unfinished words rotate to the back
+      // and come round again (so each word gets its intro, then its 2 exercises).
+      state.study = { queue: list, total: list.length, learned: 0, flipped: false, answered: null };
+      render();
     }
-    function filtered() {
-      const q = strip(query);
-      return WORDS.filter((w) => (level === 'all' || w.level === level)
-        && (!q || strip(w.ru).includes(q) || strip(w.hu).includes(q)));
+    function studyDone() { return !state.study || state.study.queue.length === 0; }
+    function curRu() { return state.study.queue[0]; }
+    function options(word, key) {
+      // key 'hu' for choose (RU->HU), 'ru' for reverse (HU->RU)
+      const pool = shuffle(WORDS.filter((w) => w.ru !== word.ru)).slice(0, 3).map((w) => w[key]);
+      return shuffle([word[key], ...pool]);
     }
-    function render() {
-      renderLevels();
-      const rows = filtered();
-      el('count').textContent = `${rows.length} szó`;
-      if (!rows.length) { el('list').innerHTML = `<div class="empty">🤔 Nincs találat.</div>`; return; }
-      el('list').innerHTML = `<div class="grid">${rows.map((w, i) => `
-        <button class="tile" data-i="${WORDS.indexOf(w)}">
-          <span class="lv">${esc(w.level)}</span>
-          <div class="ru">${esc(w.ru)}</div>
-          <div class="hu">${esc(w.hu)}</div>
-        </button>`).join('')}</div>`;
-      el('list').querySelectorAll('[data-i]').forEach((b) => b.addEventListener('click', () => openWord(WORDS[Number(b.dataset.i)])));
+    function reset(s) { s.flipped = false; s.answered = null; s._opts = null; s._optsFor = null; }
+    function rotate() { const s = state.study; s.queue.push(s.queue.shift()); reset(s); render(); }
+    function finishWord() { const s = state.study; s.queue.shift(); s.learned++; reset(s); render(); }
+
+    function decide(learn) {
+      const ru = curRu();
+      if (learn) { setWord(ru, { status: 'new', stages: ['intro'] }); rotate(); }
+      else { setWord(ru, { status: 'known', stages: ['intro', ...EX] }); toast('Már tudod ✓'); finishWord(); }
     }
+    function answer(stage, choice, word) {
+      const correct = stage === 'choose' ? choice === word.hu : choice === word.ru;
+      state.study.answered = { choice, correct, stage };
+      if (correct) {
+        const p = PROG[word.ru] || { status: 'learning', stages: ['intro'] };
+        const stages = Array.from(new Set([...(p.stages || ['intro']), stage]));
+        const status = EX.every((e) => stages.includes(e)) ? 'known' : 'learning';
+        setWord(word.ru, { status, stages });
+        render();
+        setTimeout(() => { if (status === 'known') { toast('Megtanultad! 🎉'); finishWord(); } else rotate(); }, 750);
+      } else {
+        render();
+        setTimeout(() => rotate(), 1400);
+      }
+    }
+
+    function toast(msg) {
+      const t = document.createElement('div'); t.className = 'toast'; t.textContent = msg;
+      document.body.appendChild(t); setTimeout(() => t.remove(), 1600);
+    }
+
+    // ---------- renders ----------
+    function renderTabs() {
+      const items = [['learn', 'Tanulás'], ['words', 'Szavak'], ['groups', 'Csoportok']];
+      $tabs.innerHTML = items.map(([k, l]) => `<button class="tab ${state.tab === k ? 'sel' : ''}" data-tab="${k}">${l}</button>`).join('');
+      $tabs.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; state.groupDetail = null; if (b.dataset.tab === 'learn' && !state.study) buildStudy(); else render(); }));
+    }
+
+    function counts(pool) { const c = { all: pool.length }; for (const lv of LEVELS) c[lv] = pool.filter((w) => w.level === lv).length; return c; }
+    const statusClass = (ru) => statusOf(ru);
+
+    function renderWords() {
+      const c = counts(WORDS);
+      const chip = (lv, label) => `<button class="lvl-chip ${state.wLevel === lv ? 'sel' : ''}" data-lv="${lv}"><b>${label}</b><span>${c[lv] || 0}</span></button>`;
+      const q = strip(state.wQuery);
+      let rows = WORDS.filter((w) => (state.wLevel === 'all' || w.level === state.wLevel) && (!q || strip(w.ru).includes(q) || strip(w.hu).includes(q)));
+      const tiles = rows.map((w) => `<button class="tile ${statusClass(w.ru)}" data-ru="${esc(w.ru)}">
+        <span class="lv">${esc(w.level)}</span><div class="ru">${esc(w.ru)}</div><div class="hu">${esc(w.hu)}</div></button>`).join('');
+      $app.innerHTML = `
+        <h1>Szavak</h1><p class="sub">🇷🇺 Orosz → 🇭🇺 Magyar — böngészd szint szerint, koppints egy szóra.</p>
+        <div class="search"><span>🔎</span><input id="q" placeholder="Keresés (oroszul vagy magyarul)…" value="${esc(state.wQuery)}" autocomplete="off">${state.wQuery ? '<button class="clear" id="clear">✕</button>' : ''}</div>
+        <div class="lvl-row">${chip('all', 'Mind') + LEVELS.map((lv) => chip(lv, lv)).join('')}</div>
+        ${legend()}
+        <div class="count">${rows.length} szó</div>
+        ${rows.length ? `<div class="grid">${tiles}</div>` : `<div class="empty">🤔 Nincs találat.</div>`}`;
+      $app.querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { state.wLevel = b.dataset.lv; render(); }));
+      $app.querySelectorAll('[data-ru]').forEach((b) => b.addEventListener('click', () => openWord(BY_RU[b.dataset.ru])));
+      const qi = document.getElementById('q'); if (qi) { qi.addEventListener('input', (e) => { state.wQuery = e.target.value; render(); }); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
+      const cl = document.getElementById('clear'); if (cl) cl.addEventListener('click', () => { state.wQuery = ''; render(); });
+    }
+    function legend() {
+      const it = (c, l) => `<span><i style="background:var(--${c})"></i>${l}</span>`;
+      return `<div class="legend">${it('known', 'megtanult')}${it('learning', 'tanulásban')}${it('new', 'új')}${it('untouched', 'nem kezdett')}</div>`;
+    }
+
+    function renderGroups() {
+      if (state.groupDetail) return renderGroupDetail();
+      const card = (g) => { const learned = g.words.filter((ru) => statusOf(ru) === 'known').length;
+        return `<button class="gcard" data-g="${g.id}"><span class="gic">${g.icon}</span><span><b>${esc(g.title)}</b><small>${learned}/${g.words.length} megtanult</small></span></button>`; };
+      const byCat = (cat, label) => { const list = GROUPS.filter((g) => g.cat === cat); if (!list.length) return '';
+        return `<div class="sec-h">${label}</div><div class="group-grid">${list.map(card).join('')}</div>`; };
+      $app.innerHTML = `<h1>Csoportok</h1><p class="sub">Tanulj témák és nyelvtan szerint.</p>${byCat('topic', 'Témák')}${byCat('grammar', 'Nyelvtan')}`;
+      $app.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => { state.groupDetail = b.dataset.g; render(); }));
+    }
+    function renderGroupDetail() {
+      const g = GROUPS.find((x) => x.id === state.groupDetail);
+      const tiles = g.words.map((ru) => { const w = BY_RU[ru]; if (!w) return ''; return `<button class="tile ${statusClass(ru)}" data-ru="${esc(ru)}">
+        <span class="lv">${esc(w.level)}</span><div class="ru">${esc(w.ru)}</div><div class="hu">${esc(w.hu)}</div></button>`; }).join('');
+      $app.innerHTML = `<div style="margin-bottom:10px"><span class="link" id="gback">← Csoportok</span></div>
+        <div class="prog"><span style="font-size:22px">${g.icon}</span><b style="font-size:20px">${esc(g.title)}</b><button class="btn" id="gstudy">Tanuld a csoportot</button></div>
+        ${legend()}<div class="grid">${tiles}</div>`;
+      document.getElementById('gback').addEventListener('click', () => { state.groupDetail = null; render(); });
+      document.getElementById('gstudy').addEventListener('click', () => { state.tab = 'learn'; buildStudy(g.words.filter((ru) => BY_RU[ru])); });
+      $app.querySelectorAll('[data-ru]').forEach((b) => b.addEventListener('click', () => openWord(BY_RU[b.dataset.ru])));
+    }
+
+    function renderLearn() {
+      if (!state.study) { buildStudy(); return; }
+      if (studyDone()) {
+        $app.innerHTML = `<div class="study"><div class="empty"><div class="big">🎉</div><p>Kész! Szép munka.</p>
+          <button class="btn" id="again" style="margin-top:14px">Új kör</button></div></div>`;
+        document.getElementById('again').addEventListener('click', () => buildStudy());
+        return;
+      }
+      const s = state.study; const ru = curRu(); const w = BY_RU[ru];
+      const stage = s.answered ? s.answered.stage : pickStage(ru); // keep the answered card visible
+      const p = PROG[ru]; const done = (p?.stages || []).filter((x) => EX.includes(x)).length;
+      const head = `<div class="prog">
+        <span>📚 ${s.learned} / ${s.total}</span>
+        <span class="chip">${stage === 'flashcard' ? 'új szó' : done + '/2'}</span></div>`;
+      let body = '';
+      if (stage === 'flashcard') {
+        body = `<div class="flip ${s.flipped ? 'is-flipped' : ''}" id="flip">
+          <div class="flip-in">
+            <div class="face front scard" data-flip><div class="word">${esc(w.ru)}</div><div class="pos">${esc(w.pos || '')}</div>
+              <div class="hint">koppints a megfordításhoz</div>
+              <div class="decide"><span>👍 Már tudom</span><span class="learn">Tanulom 📚</span></div></div>
+            <div class="face back scard" data-flip><div class="mean">${esc(w.hu)}</div>
+              ${w.ex ? `<div class="ex">„${esc(w.ex)}"<div class="exhu">${esc(w.exHu || '')}</div></div>` : ''}
+              <div class="actions"><button class="btn ghost" id="know">👍 Már tudom</button><button class="btn" id="learn">📚 Tanulom</button></div></div>
+          </div></div>`;
+      } else {
+        const isChoose = stage === 'choose';
+        const key = isChoose ? 'hu' : 'ru';
+        if (!s._opts || s._optsFor !== ru + stage) { s._opts = options(w, key); s._optsFor = ru + stage; }
+        const prompt = isChoose ? `Mit jelent ez: <b>${esc(w.ru)}</b>?` : `Melyik az „<b>${esc(w.hu)}</b>" oroszul?`;
+        const ans = s.answered;
+        const opts = s._opts.map((o) => { let cls = 'opt';
+          if (ans) { const isCorrect = isChoose ? o === w.hu : o === w.ru; if (isCorrect) cls += ' correct'; else if (o === ans.choice) cls += ' wrong'; }
+          return `<button class="${cls}" data-opt="${esc(o)}" ${ans ? 'disabled' : ''}>${esc(o)}</button>`; }).join('');
+        body = `<div class="scard" style="display:block;text-align:center">
+          <div class="q">${prompt}</div><div class="opts">${opts}</div></div>`;
+      }
+      $app.innerHTML = `<div class="study">${head}${body}</div>`;
+      if (stage === 'flashcard') {
+        $app.querySelectorAll('[data-flip]').forEach((el) => el.addEventListener('click', (e) => { if (e.target.closest('button')) return; s.flipped = !s.flipped; document.getElementById('flip').classList.toggle('is-flipped', s.flipped); }));
+        const kb = document.getElementById('know'); if (kb) kb.addEventListener('click', () => decide(false));
+        const lb = document.getElementById('learn'); if (lb) lb.addEventListener('click', () => decide(true));
+        armSwipe();
+      } else {
+        $app.querySelectorAll('[data-opt]').forEach((b) => b.addEventListener('click', () => answer(stage, b.dataset.opt, w)));
+      }
+    }
+
     function openWord(w) {
       if (!w) return;
-      const ex = w.ex ? `<div class="ex"><div class="exru">„${esc(w.ex)}"</div>${w.exHu ? `<div class="exhu">${esc(w.exHu)}</div>` : ''}</div>` : '';
-      const ov = document.createElement('div');
-      ov.className = 'overlay';
-      ov.innerHTML = `<div class="sheet">
-        <div class="word">${esc(w.ru)}<span class="badge">${esc(w.level)}</span></div>
-        <div class="pos">${esc(w.pos || '')}</div>
+      const ov = document.createElement('div'); ov.className = 'overlay';
+      ov.innerHTML = `<div class="sheet"><div class="word">${esc(w.ru)}<span class="badge">${esc(w.level)}</span></div>
+        <div class="pos" style="color:var(--muted);font-size:13px">${esc(w.pos || '')}</div>
         <div class="mean">${esc(w.hu)}</div>
-        ${ex}
-        <button class="close">Bezár</button>
-      </div>`;
-      ov.addEventListener('click', (e) => { if (e.target === ov || e.target.classList.contains('close')) ov.remove(); });
+        ${w.ex ? `<div class="ex" style="background:var(--accent-soft);border-radius:12px;padding:10px 12px">„${esc(w.ex)}"<div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(w.exHu || '')}</div></div>` : ''}
+        <button class="btn" id="cl" style="width:100%;margin-top:16px">Bezár</button></div>`;
+      ov.addEventListener('click', (e) => { if (e.target === ov || e.target.id === 'cl') ov.remove(); });
       document.body.appendChild(ov);
     }
 
-    el('q').addEventListener('input', (e) => { query = e.target.value; el('clear').hidden = !query; render(); });
-    el('clear').addEventListener('click', () => { query = ''; el('q').value = ''; el('clear').hidden = true; render(); el('q').focus(); });
+    function render() {
+      renderTabs();
+      if (state.tab === 'words') renderWords();
+      else if (state.tab === 'groups') renderGroups();
+      else renderLearn();
+    }
+
+    // ---------- swipe on flashcard (decide) ----------
+    let SW = null;
+    function armSwipe() {
+      const card = document.getElementById('flip'); if (!card) return;
+      card.style.touchAction = 'pan-y';
+      card.addEventListener('pointerdown', (e) => {
+        if (e.target.closest('button')) return;
+        const ind = document.createElement('div'); ind.className = 'swipe-ind';
+        const ico = document.createElement('span'); ico.className = 'swipe-ico'; ind.appendChild(ico);
+        const cap = document.createElement('span'); cap.className = 'swipe-cap'; ind.appendChild(cap);
+        card.appendChild(ind); card.style.position = 'relative';
+        SW = { card, ind, ico, cap, x0: e.clientX, dx: 0, moved: false };
+      });
+    }
+    document.addEventListener('pointermove', (e) => {
+      if (!SW) return; SW.dx = e.clientX - SW.x0; if (Math.abs(SW.dx) > 6) SW.moved = true;
+      if (!SW.moved) return; const dir = SW.dx < 0 ? 'left' : 'right'; const rev = Math.min(1, Math.abs(SW.dx) / 90);
+      SW.card.style.transform = `translateX(${SW.dx}px) rotate(${(SW.dx * 0.03).toFixed(2)}deg)`;
+      SW.ind.style.opacity = 0.12 + rev * 0.8;
+      const col = dir === 'left' ? '37,99,235' : '46,160,67';
+      SW.ind.style.background = `linear-gradient(${dir === 'left' ? '90deg' : '270deg'}, rgba(${col},.9), rgba(${col},.12))`;
+      SW.ico.textContent = dir === 'left' ? '👍' : '📚'; SW.cap.textContent = dir === 'left' ? 'Már tudom' : 'Tanulom';
+    });
+    function endSwipe() {
+      if (!SW) return; const s = SW; SW = null;
+      if (Math.abs(s.dx) >= 90) { const dir = s.dx < 0 ? 'left' : 'right';
+        s.card.style.transition = 'transform .25s, opacity .25s'; s.card.style.transform = `translateX(${s.dx > 0 ? 600 : -600}px)`; s.card.style.opacity = '0';
+        setTimeout(() => decide(dir === 'right'), 200);
+      } else { s.card.style.transition = 'transform .2s'; s.card.style.transform = ''; if (s.ind) s.ind.remove(); }
+    }
+    document.addEventListener('pointerup', endSwipe);
+    document.addEventListener('pointercancel', endSwipe);
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const ov = document.querySelector('.overlay'); if (ov) ov.remove(); } });
 
+    // ---------- boot ----------
+    buildStudy(); // prepares a session
     render();
   </script>
 </body>

@@ -236,3 +236,19 @@ window.RU_WORDS = [
   { ru: 'зачастую', hu: 'gyakorta', level: 'C2', pos: 'határozószó', ex: 'Зачастую это так.', exHu: 'Gyakorta így van.' },
   { ru: 'впредь', hu: 'ezentúl', level: 'C2', pos: 'határozószó', ex: 'Впредь будь осторожен.', exHu: 'Ezentúl légy óvatos.' },
 ];
+
+// Word groups (topic / grammar), each referencing words from RU_WORDS by `ru`.
+window.RU_GROUPS = [
+  { id: 'greetings', cat: 'topic', icon: '👋', title: 'Üdvözlések', words: ['привет', 'пока', 'здравствуйте', 'спасибо', 'пожалуйста', 'извините', 'да', 'нет'] },
+  { id: 'family', cat: 'topic', icon: '👪', title: 'Család', words: ['семья', 'ребёнок', 'жена', 'муж', 'мама', 'папа', 'друг', 'человек'] },
+  { id: 'fooddrink', cat: 'topic', icon: '🍎', title: 'Étel és ital', words: ['еда', 'ужин', 'хлеб', 'молоко', 'вода', 'чай', 'кофе'] },
+  { id: 'home', cat: 'topic', icon: '🏠', title: 'Otthon és város', words: ['дом', 'город', 'улица', 'школа', 'работа', 'магазин', 'окно', 'дверь', 'стол'] },
+  { id: 'time', cat: 'topic', icon: '⏰', title: 'Idő', words: ['день', 'ночь', 'утро', 'вечер', 'время', 'год', 'сегодня', 'завтра', 'сейчас', 'потом'] },
+  { id: 'travel', cat: 'topic', icon: '✈️', title: 'Utazás', words: ['машина', 'поезд', 'самолёт', 'билет', 'город'] },
+  { id: 'nature', cat: 'topic', icon: '🌳', title: 'Természet és időjárás', words: ['природа', 'погода', 'зима', 'лето'] },
+  { id: 'questions', cat: 'grammar', icon: '❓', title: 'Kérdőszavak', words: ['кто', 'что', 'где', 'когда', 'как', 'почему'] },
+  { id: 'numbers', cat: 'grammar', icon: '🔢', title: 'Számok', words: ['один', 'два', 'три'] },
+  { id: 'pronouns', cat: 'grammar', icon: '🧑', title: 'Névmások', words: ['я', 'ты', 'он', 'она', 'мы', 'вы', 'они', 'это'] },
+  { id: 'verbs_basic', cat: 'grammar', icon: '🅰️', title: 'Alap igék', words: ['быть', 'жить', 'знать', 'говорить', 'читать', 'писать', 'любить', 'хотеть', 'идти', 'есть', 'пить', 'работать', 'понимать', 'видеть'] },
+  { id: 'adjectives', cat: 'grammar', icon: '✨', title: 'Melléknevek', words: ['большой', 'маленький', 'новый', 'старый', 'хороший', 'красивый', 'трудный', 'лёгкий', 'быстрый', 'медленный', 'важный', 'интересный', 'дорогой', 'дешёвый'] },
+];
