@@ -443,6 +443,7 @@
       return `<div class="vdet">${DET_FIELDS.filter(([k]) => d[k]).map(([k, label]) =>
         `<h4>${label}</h4><p>${esc(d[k])}</p>`).join('')}</div>`;
     }
+    const DET = {}; // runtime cache of AI-fetched details, keyed by ru
     function openWord(w) {
       if (!w) return;
       const ov = document.createElement('div'); ov.className = 'peek-overlay';
@@ -453,20 +454,44 @@
           <div class="flash-hu">${esc(w.hu)}</div>
           <div class="peek-pos">${esc(w.pos || '')} · ${esc(w.level)}</div>
           ${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
-          <div id="detbox" hidden>${w.det ? detHtml(w.det) : ''}</div>
+          <div id="detbox" hidden></div>
         </div>
         <div class="peek-actions">
-          ${w.det ? `<button class="btn ghost" id="pmore">✨ Tudj meg többet</button>` : ''}
+          <button class="btn ghost" id="pmore">✨ Tudj meg többet</button>
           <button class="btn" id="pstudy">📚 Tanuld ezt</button>
           <button class="btn ghost" id="pclose">Bezár</button>
         </div></div>`;
       ov.addEventListener('click', (e) => { if (e.target === ov || e.target.id === 'pclose') ov.remove(); });
       document.body.appendChild(ov);
-      const ps = document.getElementById('pstudy');
-      if (ps) ps.addEventListener('click', () => { ov.remove(); state.tab = 'learn'; buildStudy([w.ru]); });
-      const pm = document.getElementById('pmore');
-      if (pm) pm.addEventListener('click', () => { const box = document.getElementById('detbox');
-        box.hidden = !box.hidden; pm.textContent = box.hidden ? '✨ Tudj meg többet' : '▲ Kevesebb'; });
+      const box = ov.querySelector('#detbox');
+      const pm = ov.querySelector('#pmore');
+      let loaded = false;
+      const preset = w.det || DET[w.ru];
+      if (preset) { box.innerHTML = detHtml(preset); loaded = true; }
+
+      const ps = ov.querySelector('#pstudy');
+      ps.addEventListener('click', () => { ov.remove(); state.tab = 'learn'; buildStudy([w.ru]); });
+
+      pm.addEventListener('click', async () => {
+        if (loaded) { box.hidden = !box.hidden; pm.textContent = box.hidden ? '✨ Tudj meg többet' : '▲ Kevesebb'; return; }
+        pm.disabled = true; pm.textContent = '⏳ Töltés…'; box.hidden = false;
+        box.innerHTML = '<div class="vdet"><p style="color:var(--sub)">Kérdezem az AI-t…</p></div>';
+        try {
+          const r = await fetch('/api/details', { method: 'POST', headers: { 'content-type': 'application/json' },
+            body: JSON.stringify({ ru: w.ru, stress: w.stress, pf: w.pf, hu: w.hu, pos: w.pos, level: w.level }) });
+          if (!r.ok) { const j = await r.json().catch(() => ({})); throw new Error(j.error || ('http_' + r.status)); }
+          const det = await r.json();
+          if (!det || !Object.keys(det).length) { box.innerHTML = '<div class="vdet"><p style="color:var(--sub)">Nincs több infó ehhez a szóhoz.</p></div>'; }
+          else { DET[w.ru] = det; box.innerHTML = detHtml(det); }
+          loaded = true; pm.disabled = false; pm.textContent = '▲ Kevesebb';
+        } catch (e) {
+          pm.disabled = false; pm.textContent = '✨ Tudj meg többet';
+          const msg = e.message === 'no_key'
+            ? 'Nincs OpenAI kulcs a szerveren. Állítsd be az OPENAI_API_KEY-t, és indítsd újra a szervert.'
+            : 'Nem sikerült elérni az AI-t. Fut a szerver (server.js)? Van internet?';
+          box.innerHTML = `<div class="vdet"><p style="color:#e5484d">${msg}</p></div>`;
+        }
+      });
     }
 
     function render() {
