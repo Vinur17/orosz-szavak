@@ -11,7 +11,7 @@
     :root {
       /* Languru palette */
       --bg: #fbf6ee; --surface: #ffffff; --surface-2: #fdf9f2; --ink: #2c2115; --sub: #7a6c59; --line: #ece0d0;
-      --accent: #2fb060; --accent-2: #26934f; --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+      --accent: #5b4be0; --accent-2: #4a3bc7; --accent-ink: #ffffff; --accent-soft: color-mix(in srgb, var(--accent) 14%, var(--surface));
       --sh-sm: 0 1px 2px rgba(44,33,21,.06), 0 1px 3px rgba(44,33,21,.05);
       --sh: 0 4px 14px rgba(44,33,21,.08); --sh-lg: 0 18px 50px rgba(44,33,21,.16);
       --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -31,18 +31,20 @@
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink); overflow-x: hidden;
       font: 16px/1.5 var(--font); }
-    .logo { font-family: var(--brand-font); }
-    .nav { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent);
-      backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
-    .nav-in { max-width: 760px; margin: 0 auto; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
-    .logo { font-weight: 800; font-size: 17px; white-space: nowrap; }
-    .tabs { display: flex; gap: 2px; margin-left: auto; }
-    .tab { border: 0; background: transparent; color: var(--muted); font: inherit; font-weight: 600;
-      padding: 7px 11px; border-radius: 10px; cursor: pointer; white-space: nowrap; }
-    .tab.sel { background: var(--accent-soft); color: var(--accent-d); }
-    .wrap { max-width: 760px; margin: 0 auto; padding: 20px 16px 70px; }
-    h1 { font-size: 26px; margin: 4px 0 2px; }
-    .sub { color: var(--muted); margin: 0 0 16px; }
+    .logo { font-family: var(--brand-font); font-weight: 800; }
+    .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 16px 70px; }
+    .page-head { margin-bottom: 20px; }
+    .page-head h1 { font-size: 32px; margin: 0 0 4px; }
+    .page-head .sub { color: var(--sub); margin: 0; }
+    h1 { font-size: 26px; margin: 4px 0 2px; font-weight: 800; }
+    .sub { color: var(--sub); margin: 0 0 16px; }
+    /* Segmented pill tabs — like Languru's Learn/Groups/Words switch */
+    .subtabs { display: flex; gap: 6px; background: var(--surface-2); border: 1px solid var(--line);
+      border-radius: 999px; padding: 4px; margin: 0 auto 22px; max-width: 560px; }
+    .subtab { flex: 1; padding: 9px 12px; border-radius: 999px; font-weight: 700; font-size: 15px; color: var(--sub);
+      background: transparent; border: none; cursor: pointer; font-family: var(--font); transition: background .12s, color .12s; }
+    .subtab:hover { color: var(--ink); }
+    .subtab.sel { background: var(--accent); color: var(--accent-ink); }
     .btn { border: 0; background: var(--accent); color: #fff; font: inherit; font-weight: 700;
       border-radius: 12px; padding: 11px 16px; cursor: pointer; }
     .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
@@ -75,13 +77,18 @@
     .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
     .empty { text-align: center; color: var(--muted); padding: 40px 0; }
     .big { font-size: 46px; }
-    /* Groups */
-    .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; margin-top: 10px; }
-    .gcard { display: flex; align-items: center; gap: 12px; text-align: left; border: 1px solid var(--line);
-      background: var(--card); border-radius: 16px; padding: 14px; cursor: pointer; box-shadow: var(--shadow); }
-    .gcard:hover { border-color: var(--accent); }
-    .gic { font-size: 26px; } .gcard b { display: block; } .gcard small { color: var(--muted); }
-    .sec-h { font-weight: 800; margin: 20px 0 6px; }
+    /* Groups — like Languru's Groups tab */
+    .group-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 12px; margin-top: 10px; }
+    .group-card { display: flex; align-items: center; gap: 12px; text-align: left; background: var(--surface); border: 1px solid var(--line);
+      border-radius: 16px; padding: 14px 16px; cursor: pointer; transition: transform .12s, box-shadow .12s, border-color .12s; }
+    .group-card:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.18); border-color: var(--accent); }
+    .gc-ic { font-size: 26px; width: 50px; height: 50px; display: grid; place-items: center; background: var(--accent-soft); border-radius: 13px; flex: none; }
+    .gc-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+    .gc-title { font-weight: 800; font-size: 16px; }
+    .gc-sub { color: var(--sub); font-size: 12px; }
+    .mini-bar { height: 5px; background: var(--line); border-radius: 999px; overflow: hidden; margin-top: 4px; }
+    .mini-bar > i { display: block; height: 100%; background: var(--accent); border-radius: 999px; transition: width .3s; }
+    .sec-h { font-weight: 800; font-size: 20px; margin: 22px 0 8px; }
     .link { color: var(--accent-d); font-weight: 700; cursor: pointer; }
     /* Study */
     .study { max-width: 460px; margin: 0 auto; }
@@ -238,10 +245,6 @@
   </style>
 </head>
 <body>
-  <div class="nav"><div class="nav-in">
-    <span class="logo">🇷🇺 Orosz</span>
-    <div class="tabs" id="tabs"></div>
-  </div></div>
   <div class="wrap" id="app"></div>
 
   <script src="data.js?v=6"></script>
@@ -278,7 +281,20 @@
     function setStudyLevel(lv) { state.sLevel = lv; try { localStorage.setItem('ru_slevel', lv); } catch {} buildStudy(); }
 
     const $app = document.getElementById('app');
-    const $tabs = document.getElementById('tabs');
+    // Page header + centered pill tabs (Tanulás / Csoportok / Szavak) — like Languru.
+    const V_TITLE = '🇷🇺 Orosz szavak';
+    const V_SUB = 'Kép nélkül is: hangsúly, folyamatos/befejezett igepár, példamondat és ismétlés.';
+    function chromeTop() {
+      const tb = (id, l) => `<button class="subtab ${state.tab === id ? 'sel' : ''}" data-tab="${id}">${l}</button>`;
+      return `<div class="page-head"><h1>${V_TITLE}</h1><p class="sub">${V_SUB}</p></div>
+        <div class="subtabs">${tb('learn', 'Tanulás')}${tb('groups', 'Csoportok')}${tb('words', 'Szavak')}</div>`;
+    }
+    function bindSubtabs() {
+      $app.querySelectorAll('.subtab[data-tab]').forEach((b) => b.addEventListener('click', () => {
+        state.tab = b.dataset.tab; state.groupDetail = null;
+        if (b.dataset.tab === 'learn' && !state.study) buildStudy(); else render();
+      }));
+    }
 
     // ---------- study engine ----------
     const EX = ['choose', 'reverse']; // both must pass -> known
@@ -341,12 +357,6 @@
     }
 
     // ---------- renders ----------
-    function renderTabs() {
-      const items = [['learn', 'Tanulás'], ['words', 'Szavak'], ['groups', 'Csoportok']];
-      $tabs.innerHTML = items.map(([k, l]) => `<button class="tab ${state.tab === k ? 'sel' : ''}" data-tab="${k}">${l}</button>`).join('');
-      $tabs.querySelectorAll('[data-tab]').forEach((b) => b.addEventListener('click', () => { state.tab = b.dataset.tab; state.groupDetail = null; if (b.dataset.tab === 'learn' && !state.study) buildStudy(); else render(); }));
-    }
-
     function counts(pool) { const c = { all: pool.length }; for (const lv of LEVELS) c[lv] = pool.filter((w) => w.level === lv).length; return c; }
     const statusClass = (ru) => statusOf(ru);
 
@@ -368,13 +378,14 @@
         grid = LEVELS.filter((lv) => groups[lv]).map((lv) =>
           `<div class="lvl-divider"><span>${lv}</span></div><div class="word-grid">${groups[lv].map(wordTile).join('')}</div>`).join('');
       }
-      $app.innerHTML = `
-        <h1>Szavak</h1><p class="sub">🇷🇺 Orosz → 🇭🇺 Magyar — böngészd szint szerint, koppints egy szóra.</p>
+      $app.innerHTML = chromeTop() + `
+        <p class="sub" style="text-align:center;margin:-8px 0 14px">A szótár szintenként — koppints egy szóra az előnézethez.</p>
         ${searchBar}
         <div class="lvl-row">${chip('all', 'Mind') + LEVELS.map((lv) => chip(lv, lv)).join('')}</div>
         ${legend()}
         <div class="count">${rows.length} szó</div>
         ${grid}`;
+      bindSubtabs();
       $app.querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { state.wLevel = b.dataset.lv; render(); }));
       $app.querySelectorAll('[data-ru]').forEach((b) => b.addEventListener('click', () => openWord(BY_RU[b.dataset.ru])));
       const qi = document.getElementById('q'); if (qi) { qi.addEventListener('input', (e) => { state.wQuery = e.target.value; render(); }); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
@@ -391,21 +402,34 @@
     }
     const learnedIn = (lv) => WORDS.filter((w) => (lv === 'all' || w.level === lv) && statusOf(w.ru) === 'known').length;
 
+    // words of a group up to the chosen level (cumulative), like Languru's group level filter
+    const grpWords = (g, gl) => gl === 'all' ? g.words : g.words.filter((ru) => BY_RU[ru] && LEVELS.indexOf(BY_RU[ru].level) <= LEVELS.indexOf(gl));
     function renderGroups() {
       if (state.groupDetail) return renderGroupDetail();
-      const card = (g) => { const learned = g.words.filter((ru) => statusOf(ru) === 'known').length;
-        return `<button class="gcard" data-g="${g.id}"><span class="gic">${g.icon}</span><span><b>${esc(g.title)}</b><small>${learned}/${g.words.length} megtanult</small></span></button>`; };
-      const byCat = (cat, label) => { const list = GROUPS.filter((g) => g.cat === cat); if (!list.length) return '';
-        return `<div class="sec-h">${label}</div><div class="group-grid">${list.map(card).join('')}</div>`; };
-      $app.innerHTML = `<h1>Csoportok</h1><p class="sub">Tanulj témák és nyelvtan szerint.</p>${byCat('topic', 'Témák')}${byCat('grammar', 'Nyelvtan')}`;
+      const gl = state.gLevel || 'all';
+      const card = (g) => { const ws = grpWords(g, gl); const learned = ws.filter((ru) => statusOf(ru) === 'known').length;
+        const pct = ws.length ? Math.round((learned / ws.length) * 100) : 0;
+        return `<button class="group-card" data-g="${g.id}"><span class="gc-ic">${g.icon}</span>
+          <span class="gc-main"><span class="gc-title">${esc(g.title)}</span><span class="gc-sub">${learned}/${ws.length} megtanult</span>
+          <span class="mini-bar"><i style="width:${pct}%"></i></span></span></button>`; };
+      const byCat = (cat, label) => { let list = GROUPS.filter((g) => g.cat === cat); if (gl !== 'all') list = list.filter((g) => grpWords(g, gl).length);
+        if (!list.length) return ''; return `<div class="sec-h">${label}</div><div class="group-grid">${list.map(card).join('')}</div>`; };
+      const lchip = (lv, l) => `<button class="lvl-chip ${gl === lv ? 'sel' : ''}" data-glv="${lv}"><b>${l}</b></button>`;
+      $app.innerHTML = chromeTop() + `
+        <p class="sub" style="text-align:center;margin:-8px 0 14px">Tanulj témák és nyelvtan szerint.</p>
+        <div class="lvl-row">${lchip('all', 'Mind') + LEVELS.map((lv) => lchip(lv, lv)).join('')}</div>
+        ${byCat('topic', 'Témák')}${byCat('grammar', 'Nyelvtan')}`;
+      bindSubtabs();
+      $app.querySelectorAll('[data-glv]').forEach((b) => b.addEventListener('click', () => { state.gLevel = b.dataset.glv; render(); }));
       $app.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => { state.groupDetail = b.dataset.g; render(); }));
     }
     function renderGroupDetail() {
       const g = GROUPS.find((x) => x.id === state.groupDetail);
       const tiles = g.words.map((ru) => { const w = BY_RU[ru]; return w ? wordTile(w) : ''; }).join('');
-      $app.innerHTML = `<div style="margin-bottom:10px"><span class="link" id="gback">← Csoportok</span></div>
+      $app.innerHTML = chromeTop() + `<div style="margin-bottom:10px"><span class="link" id="gback">← Csoportok</span></div>
         <div class="prog"><span style="font-size:22px">${g.icon}</span><b style="font-size:20px">${esc(g.title)}</b><button class="btn" id="gstudy">Tanuld a csoportot</button></div>
         ${legend()}<div class="word-grid">${tiles}</div>`;
+      bindSubtabs();
       document.getElementById('gback').addEventListener('click', () => { state.groupDetail = null; render(); });
       document.getElementById('gstudy').addEventListener('click', () => { state.tab = 'learn'; buildStudy(g.words.filter((ru) => BY_RU[ru])); });
       $app.querySelectorAll('[data-ru]').forEach((b) => b.addEventListener('click', () => openWord(BY_RU[b.dataset.ru])));
@@ -427,8 +451,9 @@
         const msg = state.study.total === 0
           ? (state.sLevel === 'all' ? 'Minden szót megtanultál! 🎉' : `Ezen a szinten (${state.sLevel}) minden szót tudsz. Válassz másik szintet.`)
           : 'Kész! Szép munka.';
-        $app.innerHTML = `<div class="study">${bar}<div class="empty"><div class="big">🎉</div><p>${msg}</p>
+        $app.innerHTML = chromeTop() + `<div class="study">${bar}<div class="empty"><div class="big">🎉</div><p>${msg}</p>
           <button class="btn" id="again" style="margin-top:14px">Új kör</button></div></div>`;
+        bindSubtabs();
         document.getElementById('again').addEventListener('click', () => buildStudy());
         bindStudyLevel();
         return;
@@ -467,7 +492,8 @@
           <div class="vpanel"><div class="ex-q">${isChoose ? 'Mit jelent ez a szó?' : 'Melyik ez oroszul?'}</div>
             <div class="opt-grid">${opts}</div></div></div>`;
       }
-      $app.innerHTML = `<div class="study">${head}${body}</div>`;
+      $app.innerHTML = chromeTop() + `<div class="study">${head}${body}</div>`;
+      bindSubtabs();
       if (!s.group) bindStudyLevel();
       if (stage === 'flashcard') {
         $app.querySelectorAll('[data-flip]').forEach((el) => el.addEventListener('click', (e) => { if (e.target.closest('button')) return; s.flipped = !s.flipped; document.getElementById('flip').classList.toggle('is-flipped', s.flipped); }));
@@ -538,7 +564,6 @@
     }
 
     function render() {
-      renderTabs();
       if (state.tab === 'words') renderWords();
       else if (state.tab === 'groups') renderGroups();
       else renderLearn();
