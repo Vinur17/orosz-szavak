@@ -177,7 +177,7 @@ window.RU_WORDS = [
   { ru: 'состояние', stress: 'состоя́ние', hu: 'állapot', level: 'B2', pos: 'főnév', ex: 'Плохое состояние.', exHu: 'Rossz állapot.' },
   { ru: 'событие', stress: 'собы́тие', hu: 'esemény', level: 'B2', pos: 'főnév', ex: 'Важное событие.', exHu: 'Fontos esemény.' },
   { ru: 'значение', stress: 'значе́ние', hu: 'jelentés / jelentőség', level: 'B2', pos: 'főnév', ex: 'Большое значение.', exHu: 'Nagy jelentőség.' },
-  { ru: 'достигать', stress: 'достига́ть', pf: 'дости́чь', hu: 'elérni', level: 'B2', pos: 'ige', ex: 'Достигать цели.', exHu: 'Elérni a célt.' },
+  { ru: 'достигать', stress: 'достига́ть', pf: 'дости́чь', det: {"ragozas":"jelen: достига́ю, достига́ешь, достига́ет, достига́ем, достига́ете, достига́ют","mult":"достига́л / достига́ла / достига́ло / достига́ли","vonzat":"+ birtokos eset (родительный): достига́ть це́ли — célt elérni; успе́ха — sikert elérni","nyelvtan":"Folyamatos (imperfektív) ige. Befejezett párja: дости́чь / дости́гнуть.","arnyalat":"Elvont „elérni”: célt, eredményt, szintet, kort — nem fizikai helyre megérkezés."}, hu: 'elérni', level: 'B2', pos: 'ige', ex: 'Достигать цели.', exHu: 'Elérni a célt.' },
   { ru: 'обеспечивать', stress: 'обеспе́чивать', pf: 'обеспе́чить', hu: 'biztosítani', level: 'B2', pos: 'ige', ex: 'Обеспечивать безопасность.', exHu: 'Biztosítani a biztonságot.' },
   { ru: 'требовать', stress: 'тре́бовать', pf: 'потре́бовать', hu: 'követelni / igényelni', level: 'B2', pos: 'ige', ex: 'Это требует времени.', exHu: 'Ez időt igényel.' },
   { ru: 'предпочитать', stress: 'предпочита́ть', pf: 'предпоче́сть', hu: 'előnyben részesíteni', level: 'B2', pos: 'ige', ex: 'Я предпочитаю чай.', exHu: 'A teát részesítem előnyben.' },

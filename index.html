@@ -189,6 +189,10 @@
     .vex { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; margin-top: 14px; text-align: left; font-size: 15px; }
     .vex span { display: block; color: var(--sub); font-size: 13px; margin-top: 4px; }
     .peek-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+    .peek-scroll { overflow-y: auto; min-height: 0; }
+    .vdet { margin-top: 14px; text-align: left; border-top: 1px solid var(--line); padding-top: 6px; }
+    .vdet h4 { margin: 12px 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent-2); }
+    .vdet p { margin: 0; font-size: 14.5px; color: var(--ink); line-height: 1.45; }
 
     .empty { text-align: center; padding: 60px 20px; color: var(--sub); }
     .empty .big { font-size: 56px; margin-bottom: 10px; }
@@ -432,16 +436,27 @@
       }
     }
 
+    // Optional grammar detail block (conjugation, past, government, grammar, nuance).
+    const DET_FIELDS = [['ragozas', 'Ragozás (jelen idő)'], ['mult', 'Múlt idő'], ['vonzat', 'Vonzat'],
+      ['nyelvtan', 'Nyelvtan'], ['arnyalat', 'Árnyalt jelentés']];
+    function detHtml(d) {
+      return `<div class="vdet">${DET_FIELDS.filter(([k]) => d[k]).map(([k, label]) =>
+        `<h4>${label}</h4><p>${esc(d[k])}</p>`).join('')}</div>`;
+    }
     function openWord(w) {
       if (!w) return;
       const ov = document.createElement('div'); ov.className = 'peek-overlay';
       ov.innerHTML = `<div class="peek-card">
-        <div class="flash-word">${esc(disp(w))}</div>
-        ${w.pf ? `<div class="peek-pf"><b>bef.</b> ${esc(w.pf)}</div>` : ''}
-        <div class="flash-hu">${esc(w.hu)}</div>
-        <div class="peek-pos">${esc(w.pos || '')} · ${esc(w.level)}</div>
-        ${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
+        <div class="peek-scroll">
+          <div class="flash-word">${esc(disp(w))}</div>
+          ${w.pf ? `<div class="peek-pf"><b>bef.</b> ${esc(w.pf)}</div>` : ''}
+          <div class="flash-hu">${esc(w.hu)}</div>
+          <div class="peek-pos">${esc(w.pos || '')} · ${esc(w.level)}</div>
+          ${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
+          <div id="detbox" hidden>${w.det ? detHtml(w.det) : ''}</div>
+        </div>
         <div class="peek-actions">
+          ${w.det ? `<button class="btn ghost" id="pmore">✨ Tudj meg többet</button>` : ''}
           <button class="btn" id="pstudy">📚 Tanuld ezt</button>
           <button class="btn ghost" id="pclose">Bezár</button>
         </div></div>`;
@@ -449,6 +464,9 @@
       document.body.appendChild(ov);
       const ps = document.getElementById('pstudy');
       if (ps) ps.addEventListener('click', () => { ov.remove(); state.tab = 'learn'; buildStudy([w.ru]); });
+      const pm = document.getElementById('pmore');
+      if (pm) pm.addEventListener('click', () => { const box = document.getElementById('detbox');
+        box.hidden = !box.hidden; pm.textContent = box.hidden ? '✨ Tudj meg többet' : '▲ Kevesebb'; });
     }
 
     function render() {
