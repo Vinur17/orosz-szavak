@@ -32,6 +32,9 @@
     body { margin: 0; background: var(--bg); color: var(--ink); overflow-x: hidden;
       font: 16px/1.5 var(--font); }
     .logo { font-family: var(--brand-font); font-weight: 800; }
+    /* Stress mark: underline the stressed vowel instead of an ugly floating accent. */
+    .str { text-decoration: underline; text-decoration-color: #f5a623; text-decoration-thickness: 2px;
+      text-underline-offset: 3px; text-decoration-skip-ink: none; }
     .wrap { max-width: 1120px; margin: 0 auto; padding: 28px 16px 70px; }
     .page-head { margin-bottom: 20px; }
     .page-head h1 { font-size: 32px; margin: 0 0 4px; }
@@ -255,8 +258,12 @@
     const strip = (s) => String(s).toLowerCase().replace(/́/g, '').replace(/ё/g, 'е').trim();
     // display headword: stressed form if we have it, else plain
     const disp = (w) => w.stress || w.ru;
+    // Render a Russian word: the vowel before a combining acute (U+0301) gets an
+    // underline via <span class="str">, and the accent char itself is dropped.
+    const STRESS_RE = /([аеёиоуыэюяАЕЁИОУЫЭЮЯ])́/g;
+    const stressHtml = (raw) => esc(raw).replace(STRESS_RE, '<span class="str">$1</span>');
     // small "befejezett: <pf>" line for verb aspect pairs
-    const pfLine = (w) => w.pf ? `<div class="asp"><span class="asp-t">bef.</span> ${esc(w.pf)}</div>` : '';
+    const pfLine = (w) => w.pf ? `<div class="asp"><span class="asp-t">bef.</span> ${stressHtml(w.pf)}</div>` : '';
     const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
     const seen = new Set();
@@ -273,12 +280,14 @@
     function setWord(ru, patch) { PROG[ru] = { ...(PROG[ru] || { status: 'untouched', stages: [] }), ...patch }; saveProg(); }
 
     // ---------- state ----------
-    let sLevel0 = 'all';
-    try { sLevel0 = localStorage.getItem('ru_slevel') || 'all'; } catch {}
-    const state = { tab: 'learn', wLevel: 'all', wQuery: '', groupDetail: null,
-      sLevel: sLevel0, // which level the study session draws from ('all' or A1..C2)
+    // ONE remembered level ("Szintem") used everywhere: study, Words, Groups.
+    let level0 = 'all';
+    try { level0 = localStorage.getItem('ru_mylevel') || localStorage.getItem('ru_slevel') || 'all'; } catch {}
+    const state = { tab: 'learn', wQuery: '', groupDetail: null,
+      level: level0, // 'all' or A1..C2 — persisted, shared by all tabs
       study: null };
-    function setStudyLevel(lv) { state.sLevel = lv; try { localStorage.setItem('ru_slevel', lv); } catch {} buildStudy(); }
+    // Set my level, remember it, and refresh the study queue + current view.
+    function setLevel(lv) { state.level = lv; try { localStorage.setItem('ru_mylevel', lv); } catch {} buildStudy(); }
 
     const $app = document.getElementById('app');
     // Page header + centered pill tabs (Tanulás / Csoportok / Szavak) — like Languru.
@@ -307,11 +316,11 @@
     }
     function buildStudy(pool) {
       // pool: array of ru for a GROUP session (studies exactly those, any level);
-      // otherwise a normal session drawn from the chosen study level (state.sLevel).
+      // otherwise a normal session drawn from the remembered level (state.level).
       const group = !!pool;
       let base;
       if (group) base = pool;
-      else base = WORDS.filter((w) => state.sLevel === 'all' || w.level === state.sLevel)
+      else base = WORDS.filter((w) => state.level === 'all' || w.level === state.level)
         .sort((a, b) => LEVELS.indexOf(a.level) - LEVELS.indexOf(b.level)).map((w) => w.ru);
       const list = base.filter((ru) => BY_RU[ru] && statusOf(ru) !== 'known').slice(0, 12);
       // Dynamic queue: the front word is shown; unfinished words rotate to the back
@@ -362,17 +371,17 @@
 
     function renderWords() {
       const c = counts(WORDS);
-      const chip = (lv, label) => `<button class="lvl-chip ${state.wLevel === lv ? 'sel' : ''}" data-lv="${lv}"><b>${label}</b><span>${learnedIn(lv)}/${c[lv] || 0} megtanult</span></button>`;
+      const chip = (lv, label) => `<button class="lvl-chip ${state.level === lv ? 'sel' : ''}" data-lv="${lv}"><b>${label}</b><span>${learnedIn(lv)}/${c[lv] || 0} megtanult</span></button>`;
       const q = strip(state.wQuery);
       const searchBar = `<div class="search-box"><span class="search-ic">🔎</span>
         <input id="q" placeholder="Keresés (oroszul vagy magyarul)…" value="${esc(state.wQuery)}" autocomplete="off" autocapitalize="none" spellcheck="false">
         ${state.wQuery ? '<button class="search-clear" id="clear" aria-label="törlés">✕</button>' : ''}</div>`;
-      let rows = WORDS.filter((w) => (state.wLevel === 'all' || w.level === state.wLevel) &&
+      let rows = WORDS.filter((w) => (state.level === 'all' || w.level === state.level) &&
         (!q || strip(w.ru).includes(q) || strip(w.hu).includes(q) || strip(disp(w)).includes(q) || (w.pf && strip(w.pf).includes(q))));
       // Grid: a specific level shows a plain grid; "Mind" or a search groups by level (labeled divider), like Languru.
       let grid;
       if (!rows.length) grid = `<div class="empty"><div class="big">🤔</div><p>Nincs találat.</p></div>`;
-      else if (state.wLevel !== 'all' && !q) grid = `<div class="word-grid">${rows.map(wordTile).join('')}</div>`;
+      else if (state.level !== 'all' && !q) grid = `<div class="word-grid">${rows.map(wordTile).join('')}</div>`;
       else {
         const groups = {}; for (const w of rows) (groups[w.level] || (groups[w.level] = [])).push(w);
         grid = LEVELS.filter((lv) => groups[lv]).map((lv) =>
@@ -386,7 +395,7 @@
         <div class="count">${rows.length} szó</div>
         ${grid}`;
       bindSubtabs();
-      $app.querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { state.wLevel = b.dataset.lv; render(); }));
+      $app.querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => setLevel(b.dataset.lv)));
       $app.querySelectorAll('[data-ru]').forEach((b) => b.addEventListener('click', () => openWord(BY_RU[b.dataset.ru])));
       const qi = document.getElementById('q'); if (qi) { qi.addEventListener('input', (e) => { state.wQuery = e.target.value; render(); }); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
       const cl = document.getElementById('clear'); if (cl) cl.addEventListener('click', () => { state.wQuery = ''; render(); });
@@ -398,7 +407,7 @@
     // One word tile — solid colour by status, like Languru's Words page.
     function wordTile(w) {
       return `<button class="word-tile ${statusClass(w.ru)}" data-ru="${esc(w.ru)}" title="${esc(w.hu)}">
-        <span class="wt-text"><span class="wt-es">${esc(disp(w))}</span>${w.pf ? `<span class="wt-pf"><b>bef.</b> ${esc(w.pf)}</span>` : ''}<span class="wt-hu">${esc(w.hu)}</span></span></button>`;
+        <span class="wt-text"><span class="wt-es">${stressHtml(disp(w))}</span>${w.pf ? `<span class="wt-pf"><b>bef.</b> ${stressHtml(w.pf)}</span>` : ''}<span class="wt-hu">${esc(w.hu)}</span></span></button>`;
     }
     const learnedIn = (lv) => WORDS.filter((w) => (lv === 'all' || w.level === lv) && statusOf(w.ru) === 'known').length;
 
@@ -406,7 +415,7 @@
     const grpWords = (g, gl) => gl === 'all' ? g.words : g.words.filter((ru) => BY_RU[ru] && LEVELS.indexOf(BY_RU[ru].level) <= LEVELS.indexOf(gl));
     function renderGroups() {
       if (state.groupDetail) return renderGroupDetail();
-      const gl = state.gLevel || 'all';
+      const gl = state.level;
       const card = (g) => { const ws = grpWords(g, gl); const learned = ws.filter((ru) => statusOf(ru) === 'known').length;
         const pct = ws.length ? Math.round((learned / ws.length) * 100) : 0;
         return `<button class="group-card" data-g="${g.id}"><span class="gc-ic">${g.icon}</span>
@@ -420,7 +429,7 @@
         <div class="lvl-row">${lchip('all', 'Mind') + LEVELS.map((lv) => lchip(lv, lv)).join('')}</div>
         ${byCat('topic', 'Témák')}${byCat('grammar', 'Nyelvtan')}`;
       bindSubtabs();
-      $app.querySelectorAll('[data-glv]').forEach((b) => b.addEventListener('click', () => { state.gLevel = b.dataset.glv; render(); }));
+      $app.querySelectorAll('[data-glv]').forEach((b) => b.addEventListener('click', () => setLevel(b.dataset.glv)));
       $app.querySelectorAll('[data-g]').forEach((b) => b.addEventListener('click', () => { state.groupDetail = b.dataset.g; render(); }));
     }
     function renderGroupDetail() {
@@ -437,19 +446,19 @@
 
     function studyLevelBar() {
       const c = counts(WORDS);
-      const label = state.sLevel === 'all' ? 'Melyik szintet tanulod?' : `Szint: ${state.sLevel}`;
-      const chip = (lv, l) => `<button class="lvl-chip ${state.sLevel === lv ? 'sel' : ''}" data-slv="${lv}"><b>${l}</b><span>${c[lv] || 0}</span></button>`;
+      const label = state.level === 'all' ? 'Szintem: Mind' : `Szintem: ${state.level}`;
+      const chip = (lv, l) => `<button class="lvl-chip ${state.level === lv ? 'sel' : ''}" data-slv="${lv}"><b>${l}</b><span>${c[lv] || 0}</span></button>`;
       return `<div class="count" style="margin-bottom:2px">${label}</div><div class="lvl-row" style="margin-top:0">${chip('all', 'Mind') + LEVELS.map((lv) => chip(lv, lv)).join('')}</div>`;
     }
     function bindStudyLevel() {
-      $app.querySelectorAll('[data-slv]').forEach((b) => b.addEventListener('click', () => setStudyLevel(b.dataset.slv)));
+      $app.querySelectorAll('[data-slv]').forEach((b) => b.addEventListener('click', () => setLevel(b.dataset.slv)));
     }
     function renderLearn() {
       if (!state.study) { buildStudy(); return; }
       const bar = state.study.group ? '' : studyLevelBar();
       if (studyDone()) {
         const msg = state.study.total === 0
-          ? (state.sLevel === 'all' ? 'Minden szót megtanultál! 🎉' : `Ezen a szinten (${state.sLevel}) minden szót tudsz. Válassz másik szintet.`)
+          ? (state.level === 'all' ? 'Minden szót megtanultál! 🎉' : `Ezen a szinten (${state.level}) minden szót tudsz. Válassz másik szintet.`)
           : 'Kész! Szép munka.';
         $app.innerHTML = chromeTop() + `<div class="study">${bar}<div class="empty"><div class="big">🎉</div><p>${msg}</p>
           <button class="btn" id="again" style="margin-top:14px">Új kör</button></div></div>`;
@@ -470,11 +479,11 @@
         body = `<div class="flip3d ${s.flipped ? 'is-flipped' : ''}" id="flip"><div class="flip3d-inner">
           <div class="vcard flip3d-face flip3d-front" data-flip>
             <div class="vhero"><div class="vhero-ov"></div><div class="vhero-top"><span class="vbadge phase-new">ÚJ SZÓ</span></div>
-              <div class="vhero-center"><div class="vhero-word">${esc(disp(w))}</div>${w.pf ? `<div class="vhero-pf"><b>bef.</b> ${esc(w.pf)}</div>` : ''}${w.pos ? `<div class="vhero-pos">${esc(w.pos)}</div>` : ''}</div></div>
+              <div class="vhero-center"><div class="vhero-word">${stressHtml(disp(w))}</div>${w.pf ? `<div class="vhero-pf"><b>bef.</b> ${stressHtml(w.pf)}</div>` : ''}${w.pos ? `<div class="vhero-pos">${esc(w.pos)}</div>` : ''}</div></div>
             <div class="vpanel center-text"><div class="flip-hint">koppints a megfordításhoz</div></div></div>
           <div class="vcard flip3d-face flip3d-back" data-flip>
-            <div class="vhero"><div class="vhero-ov"></div><div class="vhero-center"><div class="vhero-word">${esc(disp(w))}</div></div></div>
-            <div class="vpanel"><div class="vdef">${esc(w.hu)}</div>${w.pf ? `<p class="mean-pf"><b>bef.</b> ${esc(w.pf)}</p>` : ''}${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
+            <div class="vhero"><div class="vhero-ov"></div><div class="vhero-center"><div class="vhero-word">${stressHtml(disp(w))}</div></div></div>
+            <div class="vpanel"><div class="vdef">${esc(w.hu)}</div>${w.pf ? `<p class="mean-pf"><b>bef.</b> ${stressHtml(w.pf)}</p>` : ''}${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
               <div class="actions"><button class="btn ghost" id="know">👍 Már tudom</button><button class="btn" id="learn">📚 Tanulom</button></div></div></div>
         </div></div>`;
       } else {
@@ -484,11 +493,11 @@
         const ans = s.answered;
         const opts = s._opts.map((o) => { let cls = 'opt-btn';
           if (ans) { const isCorrect = isChoose ? o === w.hu : o === w.ru; if (isCorrect) cls += ' correct'; else if (o === ans.choice) cls += ' wrong'; }
-          const text = isChoose ? esc(o) : esc(disp(BY_RU[o] || { ru: o }));
+          const text = isChoose ? esc(o) : stressHtml(disp(BY_RU[o] || { ru: o }));
           return `<button class="${cls}" data-opt="${esc(o)}" ${ans ? 'disabled' : ''}>${text}</button>`; }).join('');
         body = `<div class="vcard">
           <div class="vhero"><div class="vhero-ov"></div><div class="vhero-top"><span class="vbadge phase-${phase}">${done}/2</span></div>
-            <div class="vhero-center">${isChoose ? `<div class="vhero-word">${esc(disp(w))}</div>` : `<div class="vhero-prompt">${esc(w.hu)}</div>`}</div></div>
+            <div class="vhero-center">${isChoose ? `<div class="vhero-word">${stressHtml(disp(w))}</div>` : `<div class="vhero-prompt">${esc(w.hu)}</div>`}</div></div>
           <div class="vpanel"><div class="ex-q">${isChoose ? 'Mit jelent ez a szó?' : 'Melyik ez oroszul?'}</div>
             <div class="opt-grid">${opts}</div></div></div>`;
       }
@@ -510,7 +519,7 @@
       ['nyelvtan', 'Nyelvtan'], ['arnyalat', 'Árnyalt jelentés']];
     function detHtml(d) {
       return `<div class="vdet">${DET_FIELDS.filter(([k]) => d[k]).map(([k, label]) =>
-        `<h4>${label}</h4><p>${esc(d[k])}</p>`).join('')}</div>`;
+        `<h4>${label}</h4><p>${stressHtml(d[k])}</p>`).join('')}</div>`;
     }
     const DET = {}; // runtime cache of AI-fetched details, keyed by ru
     function openWord(w) {
@@ -518,8 +527,8 @@
       const ov = document.createElement('div'); ov.className = 'peek-overlay';
       ov.innerHTML = `<div class="peek-card">
         <div class="peek-scroll">
-          <div class="flash-word">${esc(disp(w))}</div>
-          ${w.pf ? `<div class="peek-pf"><b>bef.</b> ${esc(w.pf)}</div>` : ''}
+          <div class="flash-word">${stressHtml(disp(w))}</div>
+          ${w.pf ? `<div class="peek-pf"><b>bef.</b> ${stressHtml(w.pf)}</div>` : ''}
           <div class="flash-hu">${esc(w.hu)}</div>
           <div class="peek-pos">${esc(w.pos || '')} · ${esc(w.level)}</div>
           ${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
