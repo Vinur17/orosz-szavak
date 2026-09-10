@@ -194,6 +194,44 @@
     .vdet h4 { margin: 12px 0 3px; font-size: 11px; text-transform: uppercase; letter-spacing: .05em; color: var(--accent-2); }
     .vdet p { margin: 0; font-size: 14.5px; color: var(--ink); line-height: 1.45; }
 
+    /* ===== Study (Tanulás) — matches Languru's vocab study UI ===== */
+    .center-text { text-align: center; }
+    .flash-progress { display: flex; align-items: center; justify-content: space-between; color: var(--sub); font-size: 14px; margin-bottom: 12px; }
+    .vcard { border-radius: 22px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,.16); background: var(--surface); border: 1px solid var(--line); }
+    .vhero { position: relative; min-height: 240px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #2b3346, #3a445c); }
+    .vhero-ov { position: absolute; inset: 0; background: linear-gradient(180deg, rgba(10,14,22,.30) 0%, rgba(10,14,22,.5) 55%, rgba(10,14,22,.82) 100%); }
+    .vhero-top { position: absolute; top: 14px; right: 14px; z-index: 2; }
+    .vhero-center { position: relative; z-index: 2; text-align: center; color: #fff; padding: 24px; width: 100%; }
+    .vhero-word { font-size: 40px; font-weight: 900; letter-spacing: .01em; text-shadow: 0 2px 14px rgba(0,0,0,.55); word-break: break-word; }
+    .vhero-pf { margin-top: 8px; font-size: 17px; font-weight: 700; opacity: .92; }
+    .vhero-pf b { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; opacity: .8; }
+    .vhero-pos { margin-top: 6px; font-size: 14px; font-style: italic; opacity: .85; }
+    .vhero-prompt { font-size: 26px; font-weight: 800; line-height: 1.35; text-shadow: 0 2px 12px rgba(0,0,0,.55); }
+    .vbadge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: .06em; color: #fff; background: rgba(0,0,0,.4); }
+    .vbadge.phase-new { background: linear-gradient(135deg, #8e2fd0, #c21f8a); }
+    .vbadge.phase-learning { background: linear-gradient(135deg, #2b6fe0, #24a3d4); }
+    .vbadge.phase-known { background: linear-gradient(135deg, #2f9e5f, #46b23f); }
+    .vpanel { padding: 20px; }
+    .flip-hint { font-style: italic; color: var(--sub); }
+    .vdef { font-size: 24px; font-weight: 800; color: var(--accent); text-align: center; margin-bottom: 10px; }
+    .mean-pf { text-align: center; margin: 0 0 10px; color: var(--sub); font-size: 16px; }
+    .mean-pf b { color: var(--accent-2); font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+    .ex-q { font-size: 15px; color: var(--sub); font-weight: 600; margin-bottom: 10px; text-align: center; }
+    .opt-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; width: 100%; }
+    .opt-btn { font-family: var(--font); font-size: 16px; font-weight: 600; padding: 14px; border: 1.5px solid var(--line);
+      border-radius: 10px; background: var(--surface-2); cursor: pointer; color: var(--ink); transition: border-color .12s, background .12s; }
+    .opt-btn:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .opt-btn:disabled { cursor: default; }
+    .opt-btn.correct { border-color: #2f9e5f; background: color-mix(in srgb, #2f9e5f 18%, var(--surface)); font-weight: 800; }
+    .opt-btn.wrong { border-color: #d1544e; background: color-mix(in srgb, #d1544e 16%, var(--surface)); }
+    .flip3d { perspective: 1600px; }
+    .flip3d-inner { position: relative; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.4, .15, .2, 1); }
+    .flip3d.is-flipped .flip3d-inner { transform: rotateY(180deg); }
+    .flip3d-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+    .flip3d-front { position: absolute; inset: 0; cursor: pointer; }
+    .flip3d-back { transform: rotateY(180deg); }
+    .study { max-width: 480px; margin: 0 auto; }
+
     .empty { text-align: center; padding: 60px 20px; color: var(--sub); }
     .empty .big { font-size: 56px; margin-bottom: 10px; }
     h1 { font-weight: 800; }
@@ -398,31 +436,36 @@
       const s = state.study; const ru = curRu(); const w = BY_RU[ru];
       const stage = s.answered ? s.answered.stage : pickStage(ru); // keep the answered card visible
       const p = PROG[ru]; const done = (p?.stages || []).filter((x) => EX.includes(x)).length;
-      const head = `${bar}<div class="prog">
+      const phase = statusOf(ru) === 'untouched' ? 'new' : statusOf(ru);
+      const head = `${bar}<div class="flash-progress">
         <span>📚 ${s.learned} / ${s.total}</span>
-        <span class="chip">${stage === 'flashcard' ? 'új szó' : done + '/2'}</span></div>`;
+        <span class="vbadge phase-${phase}">${stage === 'flashcard' ? 'ÚJ SZÓ' : done + '/2'}</span></div>`;
       let body = '';
       if (stage === 'flashcard') {
-        body = `<div class="flip ${s.flipped ? 'is-flipped' : ''}" id="flip">
-          <div class="flip-in">
-            <div class="face front scard" data-flip><div class="word">${esc(disp(w))}</div>${pfLine(w)}<div class="pos">${esc(w.pos || '')}</div>
-              <div class="hint">koppints a megfordításhoz</div>
-              <div class="decide"><span>👍 Már tudom</span><span class="learn">Tanulom 📚</span></div></div>
-            <div class="face back scard" data-flip><div class="mean">${esc(w.hu)}</div>
-              ${w.ex ? `<div class="ex">„${esc(w.ex)}"<div class="exhu">${esc(w.exHu || '')}</div></div>` : ''}
-              <div class="actions"><button class="btn ghost" id="know">👍 Már tudom</button><button class="btn" id="learn">📚 Tanulom</button></div></div>
-          </div></div>`;
+        body = `<div class="flip3d ${s.flipped ? 'is-flipped' : ''}" id="flip"><div class="flip3d-inner">
+          <div class="vcard flip3d-face flip3d-front" data-flip>
+            <div class="vhero"><div class="vhero-ov"></div><div class="vhero-top"><span class="vbadge phase-new">ÚJ SZÓ</span></div>
+              <div class="vhero-center"><div class="vhero-word">${esc(disp(w))}</div>${w.pf ? `<div class="vhero-pf"><b>bef.</b> ${esc(w.pf)}</div>` : ''}${w.pos ? `<div class="vhero-pos">${esc(w.pos)}</div>` : ''}</div></div>
+            <div class="vpanel center-text"><div class="flip-hint">koppints a megfordításhoz</div></div></div>
+          <div class="vcard flip3d-face flip3d-back" data-flip>
+            <div class="vhero"><div class="vhero-ov"></div><div class="vhero-center"><div class="vhero-word">${esc(disp(w))}</div></div></div>
+            <div class="vpanel"><div class="vdef">${esc(w.hu)}</div>${w.pf ? `<p class="mean-pf"><b>bef.</b> ${esc(w.pf)}</p>` : ''}${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
+              <div class="actions"><button class="btn ghost" id="know">👍 Már tudom</button><button class="btn" id="learn">📚 Tanulom</button></div></div></div>
+        </div></div>`;
       } else {
         const isChoose = stage === 'choose';
         const key = isChoose ? 'hu' : 'ru';
         if (!s._opts || s._optsFor !== ru + stage) { s._opts = options(w, key); s._optsFor = ru + stage; }
-        const prompt = isChoose ? `Mit jelent ez: <b>${esc(w.ru)}</b>?` : `Melyik az „<b>${esc(w.hu)}</b>" oroszul?`;
         const ans = s.answered;
-        const opts = s._opts.map((o) => { let cls = 'opt';
+        const opts = s._opts.map((o) => { let cls = 'opt-btn';
           if (ans) { const isCorrect = isChoose ? o === w.hu : o === w.ru; if (isCorrect) cls += ' correct'; else if (o === ans.choice) cls += ' wrong'; }
-          return `<button class="${cls}" data-opt="${esc(o)}" ${ans ? 'disabled' : ''}>${esc(o)}</button>`; }).join('');
-        body = `<div class="scard" style="display:block;text-align:center">
-          <div class="q">${prompt}</div><div class="opts">${opts}</div></div>`;
+          const text = isChoose ? esc(o) : esc(disp(BY_RU[o] || { ru: o }));
+          return `<button class="${cls}" data-opt="${esc(o)}" ${ans ? 'disabled' : ''}>${text}</button>`; }).join('');
+        body = `<div class="vcard">
+          <div class="vhero"><div class="vhero-ov"></div><div class="vhero-top"><span class="vbadge phase-${phase}">${done}/2</span></div>
+            <div class="vhero-center">${isChoose ? `<div class="vhero-word">${esc(disp(w))}</div>` : `<div class="vhero-prompt">${esc(w.hu)}</div>`}</div></div>
+          <div class="vpanel"><div class="ex-q">${isChoose ? 'Mit jelent ez a szó?' : 'Melyik ez oroszul?'}</div>
+            <div class="opt-grid">${opts}</div></div></div>`;
       }
       $app.innerHTML = `<div class="study">${head}${body}</div>`;
       if (!s.group) bindStudyLevel();
