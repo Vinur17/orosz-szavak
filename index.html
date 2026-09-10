@@ -56,6 +56,9 @@
     .tile.new { border-left-color: var(--new); } .tile.untouched { border-left-color: var(--untouched); }
     .tile .ru { font-size: 18px; font-weight: 700; }
     .tile .hu { font-size: 13px; color: var(--muted); margin-top: 2px; }
+    .asp { font-size: 12.5px; color: var(--muted); margin-top: 3px; }
+    .asp-t { font-weight: 800; color: var(--accent-d); font-size: 10px; text-transform: uppercase; letter-spacing: .03em; }
+    .scard .asp { font-size: 16px; margin-top: 6px; }
     .tile .lv { font-size: 10px; font-weight: 800; color: var(--accent-d); }
     .legend { display: flex; flex-wrap: wrap; gap: 12px; font-size: 12px; color: var(--muted); margin: 10px 0; }
     .legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; margin-right: 4px; vertical-align: middle; }
@@ -124,12 +127,16 @@
   </div></div>
   <div class="wrap" id="app"></div>
 
-  <script src="data.js?v=4"></script>
+  <script src="data.js?v=6"></script>
   <script>
     // ---------- helpers ----------
     const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
     const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-    const strip = (s) => String(s).toLowerCase().replace(/ё/g, 'е').trim();
+    const strip = (s) => String(s).toLowerCase().replace(/́/g, '').replace(/ё/g, 'е').trim();
+    // display headword: stressed form if we have it, else plain
+    const disp = (w) => w.stress || w.ru;
+    // small "befejezett: <pf>" line for verb aspect pairs
+    const pfLine = (w) => w.pf ? `<div class="asp"><span class="asp-t">bef.</span> ${esc(w.pf)}</div>` : '';
     const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
 
     const seen = new Set();
@@ -232,7 +239,7 @@
       const q = strip(state.wQuery);
       let rows = WORDS.filter((w) => (state.wLevel === 'all' || w.level === state.wLevel) && (!q || strip(w.ru).includes(q) || strip(w.hu).includes(q)));
       const tiles = rows.map((w) => `<button class="tile ${statusClass(w.ru)}" data-ru="${esc(w.ru)}">
-        <span class="lv">${esc(w.level)}</span><div class="ru">${esc(w.ru)}</div><div class="hu">${esc(w.hu)}</div></button>`).join('');
+        <span class="lv">${esc(w.level)}</span><div class="ru">${esc(disp(w))}</div>${pfLine(w)}<div class="hu">${esc(w.hu)}</div></button>`).join('');
       $app.innerHTML = `
         <h1>Szavak</h1><p class="sub">🇷🇺 Orosz → 🇭🇺 Magyar — böngészd szint szerint, koppints egy szóra.</p>
         <div class="search"><span>🔎</span><input id="q" placeholder="Keresés (oroszul vagy magyarul)…" value="${esc(state.wQuery)}" autocomplete="off">${state.wQuery ? '<button class="clear" id="clear">✕</button>' : ''}</div>
@@ -262,7 +269,7 @@
     function renderGroupDetail() {
       const g = GROUPS.find((x) => x.id === state.groupDetail);
       const tiles = g.words.map((ru) => { const w = BY_RU[ru]; if (!w) return ''; return `<button class="tile ${statusClass(ru)}" data-ru="${esc(ru)}">
-        <span class="lv">${esc(w.level)}</span><div class="ru">${esc(w.ru)}</div><div class="hu">${esc(w.hu)}</div></button>`; }).join('');
+        <span class="lv">${esc(w.level)}</span><div class="ru">${esc(disp(w))}</div>${pfLine(w)}<div class="hu">${esc(w.hu)}</div></button>`; }).join('');
       $app.innerHTML = `<div style="margin-bottom:10px"><span class="link" id="gback">← Csoportok</span></div>
         <div class="prog"><span style="font-size:22px">${g.icon}</span><b style="font-size:20px">${esc(g.title)}</b><button class="btn" id="gstudy">Tanuld a csoportot</button></div>
         ${legend()}<div class="grid">${tiles}</div>`;
@@ -303,7 +310,7 @@
       if (stage === 'flashcard') {
         body = `<div class="flip ${s.flipped ? 'is-flipped' : ''}" id="flip">
           <div class="flip-in">
-            <div class="face front scard" data-flip><div class="word">${esc(w.ru)}</div><div class="pos">${esc(w.pos || '')}</div>
+            <div class="face front scard" data-flip><div class="word">${esc(disp(w))}</div>${pfLine(w)}<div class="pos">${esc(w.pos || '')}</div>
               <div class="hint">koppints a megfordításhoz</div>
               <div class="decide"><span>👍 Már tudom</span><span class="learn">Tanulom 📚</span></div></div>
             <div class="face back scard" data-flip><div class="mean">${esc(w.hu)}</div>
@@ -337,7 +344,8 @@
     function openWord(w) {
       if (!w) return;
       const ov = document.createElement('div'); ov.className = 'overlay';
-      ov.innerHTML = `<div class="sheet"><div class="word">${esc(w.ru)}<span class="badge">${esc(w.level)}</span></div>
+      ov.innerHTML = `<div class="sheet"><div class="word">${esc(disp(w))}<span class="badge">${esc(w.level)}</span></div>
+        ${pfLine(w)}
         <div class="pos" style="color:var(--muted);font-size:13px">${esc(w.pos || '')}</div>
         <div class="mean">${esc(w.hu)}</div>
         ${w.ex ? `<div class="ex" style="background:var(--accent-soft);border-radius:12px;padding:10px 12px">„${esc(w.ex)}"<div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(w.exHu || '')}</div></div>` : ''}
