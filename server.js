@@ -10,12 +10,18 @@
 
 import { createServer } from 'node:http';
 import { readFile, writeFile } from 'node:fs/promises';
+import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, normalize } from 'node:path';
 
 const DIR = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 4300;
-const OPENAI_KEY = process.env.OPENAI_API_KEY || '';
+// Key: env var first, else a local "openai-key.txt" file (gitignored) — whichever exists.
+function readKeyFile() {
+  try { return readFileSync(join(DIR, 'openai-key.txt'), 'utf8').trim(); } catch { return ''; }
+}
+let OPENAI_KEY = process.env.OPENAI_API_KEY || readKeyFile();
+if (!OPENAI_KEY.startsWith('sk-')) OPENAI_KEY = ''; // ignore placeholder / malformed keys
 const OPENAI_MODEL = process.env.OPENAI_MODEL || 'gpt-4o-mini';
 const CACHE_FILE = join(DIR, 'details-cache.json');
 
