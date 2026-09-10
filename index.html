@@ -4,23 +4,34 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Orosz — RU → HU</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Gaegu:wght@700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
   <style>
     :root {
-      --bg: #f6f4ee; --card: #fffdf7; --ink: #2c2a26; --muted: #7c7a72;
-      --line: #e7e3d8; --accent: #2ea043; --accent-d: #268a3a; --accent-soft: #e8f6ec;
-      --shadow: 0 2px 10px rgba(0,0,0,.05);
-      --new: #7c5cff; --learning: #2f80ed; --known: #2ea043; --untouched: #b8b4a8;
+      /* Languru palette */
+      --bg: #fbf6ee; --surface: #ffffff; --surface-2: #fdf9f2; --ink: #2c2115; --sub: #7a6c59; --line: #ece0d0;
+      --accent: #2fb060; --accent-2: #26934f; --accent-soft: color-mix(in srgb, var(--accent) 12%, var(--surface));
+      --sh-sm: 0 1px 2px rgba(44,33,21,.06), 0 1px 3px rgba(44,33,21,.05);
+      --sh: 0 4px 14px rgba(44,33,21,.08); --sh-lg: 0 18px 50px rgba(44,33,21,.16);
+      --font: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      --brand-font: 'Gaegu', 'Comic Sans MS', cursive;
+      /* aliases so existing rules keep working */
+      --card: var(--surface); --muted: var(--sub); --accent-d: var(--accent-2); --shadow: var(--sh);
+      --new: #8e2fd0; --learning: #2b6fe0; --known: #2f9e5f; --untouched: #b8b4a8;
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
-        --bg: #1c1b18; --card: #262521; --ink: #efece4; --muted: #a3a096;
-        --line: #38352e; --accent: #4cc76a; --accent-d: #3ab057; --accent-soft: #1f2b22;
-        --shadow: 0 2px 10px rgba(0,0,0,.3); --untouched: #4a4740;
+        --bg: #17130f; --surface: #221d17; --surface-2: #1b1712; --ink: #efe8dd; --sub: #a89d8c; --line: #35302a;
+        --accent-soft: color-mix(in srgb, var(--accent) 24%, var(--surface));
+        --sh-sm: 0 1px 2px rgba(0,0,0,.4), 0 1px 3px rgba(0,0,0,.3); --sh: 0 4px 14px rgba(0,0,0,.5); --sh-lg: 0 18px 50px rgba(0,0,0,.6);
+        --untouched: #4a4740;
       }
     }
     * { box-sizing: border-box; }
     body { margin: 0; background: var(--bg); color: var(--ink); overflow-x: hidden;
-      font: 15px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+      font: 16px/1.5 var(--font); }
+    .logo { font-family: var(--brand-font); }
     .nav { position: sticky; top: 0; z-index: 5; background: color-mix(in srgb, var(--bg) 88%, transparent);
       backdrop-filter: blur(8px); border-bottom: 1px solid var(--line); }
     .nav-in { max-width: 760px; margin: 0 auto; padding: 10px 14px; display: flex; align-items: center; gap: 8px; }
@@ -118,6 +129,70 @@
     .swipe-cap { font-size: 18px; font-weight: 800; color: #fff; text-shadow: 0 2px 8px rgba(0,0,0,.45); }
     .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%); background: var(--accent);
       color: #fff; font-weight: 700; padding: 10px 16px; border-radius: 999px; box-shadow: 0 6px 20px rgba(0,0,0,.25); z-index: 30; }
+
+    /* ===== Words page — matches Languru's Words page look & structure ===== */
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--surface-2); border: 1.5px solid var(--line);
+      border-radius: 999px; padding: 4px 8px 4px 16px; margin: 0 auto 16px; max-width: 560px; transition: border-color .12s; }
+    .search-box:focus-within { border-color: var(--accent); }
+    .search-box .search-ic { opacity: .55; font-size: 15px; }
+    .search-box input { flex: 1; border: none; background: transparent; outline: none; padding: 10px 4px; font-size: 16px; color: var(--ink); }
+    .search-clear { border: none; background: var(--surface); color: var(--sub); width: 30px; height: 30px; border-radius: 50%;
+      cursor: pointer; font-size: 14px; line-height: 1; flex: 0 0 auto; }
+    .search-clear:hover { color: var(--ink); }
+
+    .lvl-row { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 16px; }
+    .lvl-chip { display: flex; flex-direction: column; align-items: center; gap: 2px; min-width: 84px; padding: 8px 12px;
+      border-radius: 14px; background: var(--surface-2); border: 2px solid var(--line); cursor: pointer; transition: border-color .12s; }
+    .lvl-chip:hover { border-color: var(--accent); }
+    .lvl-chip.sel { border-color: var(--accent); background: var(--accent-soft); }
+    .lvl-chip b { font-size: 16px; } .lvl-chip span { font-size: 11px; color: var(--sub); }
+
+    .wt-legend { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; margin-bottom: 12px; font-size: 12px; color: var(--sub); }
+    .wt-legend span { display: inline-flex; align-items: center; gap: 6px; }
+    .wt-legend i { width: 12px; height: 12px; border-radius: 4px; display: inline-block; }
+    .wt-legend i.known { background: linear-gradient(135deg, #2f9e5f, #46b23f); }
+    .wt-legend i.learning { background: linear-gradient(135deg, #2b6fe0, #24a3d4); }
+    .wt-legend i.new { background: linear-gradient(135deg, #8e2fd0, #c21f8a); }
+    .wt-legend i.untouched { background: linear-gradient(135deg, #767f8b, #9aa2ad); }
+
+    .lvl-divider { display: flex; align-items: center; gap: 12px; margin: 20px 0 12px; }
+    .lvl-divider::before, .lvl-divider::after { content: ''; flex: 1; height: 2px; background: var(--line); border-radius: 2px; }
+    .lvl-divider span { font-weight: 800; font-size: 15px; letter-spacing: .06em; color: var(--sub); }
+
+    .word-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(185px, 1fr)); gap: 12px; }
+    @media (max-width: 380px) { .word-grid { grid-template-columns: repeat(2, 1fr); } }
+    .word-tile { position: relative; overflow: hidden; display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 3px; min-height: 96px; padding: 16px 10px; border-radius: 14px; border: none; cursor: pointer; color: #fff;
+      text-align: center; box-shadow: var(--sh-sm); transition: transform .1s, filter .12s; }
+    .word-tile:hover { transform: translateY(-2px); filter: brightness(1.06); }
+    .word-tile:active { transform: translateY(0); }
+    .word-tile .wt-text { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; gap: 3px; }
+    .word-tile .wt-es { font-weight: 800; font-size: 17px; letter-spacing: .01em; }
+    .word-tile .wt-pf { font-size: 11.5px; font-weight: 600; opacity: .92; }
+    .word-tile .wt-pf b { font-size: 9px; text-transform: uppercase; letter-spacing: .04em; font-weight: 800; opacity: .85; }
+    .word-tile .wt-hu { font-size: 12px; font-weight: 600; opacity: .9; }
+    .word-tile.new { background: linear-gradient(135deg, #8e2fd0, #c21f8a); }
+    .word-tile.learning { background: linear-gradient(135deg, #2b6fe0, #24a3d4); }
+    .word-tile.known { background: linear-gradient(135deg, #2f9e5f, #46b23f); }
+    .word-tile.untouched { background: linear-gradient(135deg, #767f8b, #9aa2ad); }
+
+    /* Preview modal — matches Languru's peek card */
+    .peek-overlay { position: fixed; inset: 0; z-index: 60; display: flex; align-items: center; justify-content: center;
+      padding: 20px; background: rgba(0,0,0,.5); }
+    .peek-card { width: 100%; max-width: 480px; max-height: 96vh; display: flex; flex-direction: column; overflow: hidden;
+      background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 22px; text-align: center; box-shadow: var(--sh-lg); }
+    .peek-card .flash-word { font-size: 38px; font-weight: 800; color: var(--ink); }
+    .peek-card .peek-pf { font-size: 18px; color: var(--sub); margin-top: 2px; }
+    .peek-card .peek-pf b { color: var(--accent-2); font-size: 11px; text-transform: uppercase; letter-spacing: .03em; }
+    .peek-card .flash-hu { font-size: 24px; color: var(--accent-2); font-weight: 700; margin-top: 8px; }
+    .peek-card .peek-pos { color: var(--sub); font-size: 13px; margin-top: 6px; }
+    .vex { background: var(--accent-soft); border-radius: 12px; padding: 12px 14px; margin-top: 14px; text-align: left; font-size: 15px; }
+    .vex span { display: block; color: var(--sub); font-size: 13px; margin-top: 4px; }
+    .peek-actions { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 18px; }
+
+    .empty { text-align: center; padding: 60px 20px; color: var(--sub); }
+    .empty .big { font-size: 56px; margin-bottom: 10px; }
+    h1 { font-weight: 800; }
   </style>
 </head>
 <body>
@@ -235,27 +310,44 @@
 
     function renderWords() {
       const c = counts(WORDS);
-      const chip = (lv, label) => `<button class="lvl-chip ${state.wLevel === lv ? 'sel' : ''}" data-lv="${lv}"><b>${label}</b><span>${c[lv] || 0}</span></button>`;
+      const chip = (lv, label) => `<button class="lvl-chip ${state.wLevel === lv ? 'sel' : ''}" data-lv="${lv}"><b>${label}</b><span>${learnedIn(lv)}/${c[lv] || 0} megtanult</span></button>`;
       const q = strip(state.wQuery);
-      let rows = WORDS.filter((w) => (state.wLevel === 'all' || w.level === state.wLevel) && (!q || strip(w.ru).includes(q) || strip(w.hu).includes(q)));
-      const tiles = rows.map((w) => `<button class="tile ${statusClass(w.ru)}" data-ru="${esc(w.ru)}">
-        <span class="lv">${esc(w.level)}</span><div class="ru">${esc(disp(w))}</div>${pfLine(w)}<div class="hu">${esc(w.hu)}</div></button>`).join('');
+      const searchBar = `<div class="search-box"><span class="search-ic">🔎</span>
+        <input id="q" placeholder="Keresés (oroszul vagy magyarul)…" value="${esc(state.wQuery)}" autocomplete="off" autocapitalize="none" spellcheck="false">
+        ${state.wQuery ? '<button class="search-clear" id="clear" aria-label="törlés">✕</button>' : ''}</div>`;
+      let rows = WORDS.filter((w) => (state.wLevel === 'all' || w.level === state.wLevel) &&
+        (!q || strip(w.ru).includes(q) || strip(w.hu).includes(q) || strip(disp(w)).includes(q) || (w.pf && strip(w.pf).includes(q))));
+      // Grid: a specific level shows a plain grid; "Mind" or a search groups by level (labeled divider), like Languru.
+      let grid;
+      if (!rows.length) grid = `<div class="empty"><div class="big">🤔</div><p>Nincs találat.</p></div>`;
+      else if (state.wLevel !== 'all' && !q) grid = `<div class="word-grid">${rows.map(wordTile).join('')}</div>`;
+      else {
+        const groups = {}; for (const w of rows) (groups[w.level] || (groups[w.level] = [])).push(w);
+        grid = LEVELS.filter((lv) => groups[lv]).map((lv) =>
+          `<div class="lvl-divider"><span>${lv}</span></div><div class="word-grid">${groups[lv].map(wordTile).join('')}</div>`).join('');
+      }
       $app.innerHTML = `
         <h1>Szavak</h1><p class="sub">🇷🇺 Orosz → 🇭🇺 Magyar — böngészd szint szerint, koppints egy szóra.</p>
-        <div class="search"><span>🔎</span><input id="q" placeholder="Keresés (oroszul vagy magyarul)…" value="${esc(state.wQuery)}" autocomplete="off">${state.wQuery ? '<button class="clear" id="clear">✕</button>' : ''}</div>
+        ${searchBar}
         <div class="lvl-row">${chip('all', 'Mind') + LEVELS.map((lv) => chip(lv, lv)).join('')}</div>
         ${legend()}
         <div class="count">${rows.length} szó</div>
-        ${rows.length ? `<div class="grid">${tiles}</div>` : `<div class="empty">🤔 Nincs találat.</div>`}`;
+        ${grid}`;
       $app.querySelectorAll('[data-lv]').forEach((b) => b.addEventListener('click', () => { state.wLevel = b.dataset.lv; render(); }));
       $app.querySelectorAll('[data-ru]').forEach((b) => b.addEventListener('click', () => openWord(BY_RU[b.dataset.ru])));
       const qi = document.getElementById('q'); if (qi) { qi.addEventListener('input', (e) => { state.wQuery = e.target.value; render(); }); qi.focus(); qi.setSelectionRange(qi.value.length, qi.value.length); }
       const cl = document.getElementById('clear'); if (cl) cl.addEventListener('click', () => { state.wQuery = ''; render(); });
     }
     function legend() {
-      const it = (c, l) => `<span><i style="background:var(--${c})"></i>${l}</span>`;
-      return `<div class="legend">${it('known', 'megtanult')}${it('learning', 'tanulásban')}${it('new', 'új')}${it('untouched', 'nem kezdett')}</div>`;
+      const it = (c, l) => `<span><i class="${c}"></i>${l}</span>`;
+      return `<div class="wt-legend">${it('known', 'megtanult')}${it('learning', 'tanulásban')}${it('new', 'új')}${it('untouched', 'nem kezdett')}</div>`;
     }
+    // One word tile — solid colour by status, like Languru's Words page.
+    function wordTile(w) {
+      return `<button class="word-tile ${statusClass(w.ru)}" data-ru="${esc(w.ru)}" title="${esc(w.hu)}">
+        <span class="wt-text"><span class="wt-es">${esc(disp(w))}</span>${w.pf ? `<span class="wt-pf"><b>bef.</b> ${esc(w.pf)}</span>` : ''}<span class="wt-hu">${esc(w.hu)}</span></span></button>`;
+    }
+    const learnedIn = (lv) => WORDS.filter((w) => (lv === 'all' || w.level === lv) && statusOf(w.ru) === 'known').length;
 
     function renderGroups() {
       if (state.groupDetail) return renderGroupDetail();
@@ -268,11 +360,10 @@
     }
     function renderGroupDetail() {
       const g = GROUPS.find((x) => x.id === state.groupDetail);
-      const tiles = g.words.map((ru) => { const w = BY_RU[ru]; if (!w) return ''; return `<button class="tile ${statusClass(ru)}" data-ru="${esc(ru)}">
-        <span class="lv">${esc(w.level)}</span><div class="ru">${esc(disp(w))}</div>${pfLine(w)}<div class="hu">${esc(w.hu)}</div></button>`; }).join('');
+      const tiles = g.words.map((ru) => { const w = BY_RU[ru]; return w ? wordTile(w) : ''; }).join('');
       $app.innerHTML = `<div style="margin-bottom:10px"><span class="link" id="gback">← Csoportok</span></div>
         <div class="prog"><span style="font-size:22px">${g.icon}</span><b style="font-size:20px">${esc(g.title)}</b><button class="btn" id="gstudy">Tanuld a csoportot</button></div>
-        ${legend()}<div class="grid">${tiles}</div>`;
+        ${legend()}<div class="word-grid">${tiles}</div>`;
       document.getElementById('gback').addEventListener('click', () => { state.groupDetail = null; render(); });
       document.getElementById('gstudy').addEventListener('click', () => { state.tab = 'learn'; buildStudy(g.words.filter((ru) => BY_RU[ru])); });
       $app.querySelectorAll('[data-ru]').forEach((b) => b.addEventListener('click', () => openWord(BY_RU[b.dataset.ru])));
@@ -343,15 +434,21 @@
 
     function openWord(w) {
       if (!w) return;
-      const ov = document.createElement('div'); ov.className = 'overlay';
-      ov.innerHTML = `<div class="sheet"><div class="word">${esc(disp(w))}<span class="badge">${esc(w.level)}</span></div>
-        ${pfLine(w)}
-        <div class="pos" style="color:var(--muted);font-size:13px">${esc(w.pos || '')}</div>
-        <div class="mean">${esc(w.hu)}</div>
-        ${w.ex ? `<div class="ex" style="background:var(--accent-soft);border-radius:12px;padding:10px 12px">„${esc(w.ex)}"<div style="color:var(--muted);font-size:13px;margin-top:4px">${esc(w.exHu || '')}</div></div>` : ''}
-        <button class="btn" id="cl" style="width:100%;margin-top:16px">Bezár</button></div>`;
-      ov.addEventListener('click', (e) => { if (e.target === ov || e.target.id === 'cl') ov.remove(); });
+      const ov = document.createElement('div'); ov.className = 'peek-overlay';
+      ov.innerHTML = `<div class="peek-card">
+        <div class="flash-word">${esc(disp(w))}</div>
+        ${w.pf ? `<div class="peek-pf"><b>bef.</b> ${esc(w.pf)}</div>` : ''}
+        <div class="flash-hu">${esc(w.hu)}</div>
+        <div class="peek-pos">${esc(w.pos || '')} · ${esc(w.level)}</div>
+        ${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
+        <div class="peek-actions">
+          <button class="btn" id="pstudy">📚 Tanuld ezt</button>
+          <button class="btn ghost" id="pclose">Bezár</button>
+        </div></div>`;
+      ov.addEventListener('click', (e) => { if (e.target === ov || e.target.id === 'pclose') ov.remove(); });
       document.body.appendChild(ov);
+      const ps = document.getElementById('pstudy');
+      if (ps) ps.addEventListener('click', () => { ov.remove(); state.tab = 'learn'; buildStudy([w.ru]); });
     }
 
     function render() {
@@ -393,7 +490,7 @@
     }
     document.addEventListener('pointerup', endSwipe);
     document.addEventListener('pointercancel', endSwipe);
-    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const ov = document.querySelector('.overlay'); if (ov) ov.remove(); } });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const ov = document.querySelector('.peek-overlay'); if (ov) ov.remove(); } });
 
     // ---------- boot ----------
     buildStudy(); // prepares a session
