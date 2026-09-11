@@ -216,6 +216,13 @@
     .vhero-pf { margin-top: 8px; font-size: 17px; font-weight: 700; opacity: .92; }
     .vhero-pf b { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; opacity: .8; }
     .vhero-pos { margin-top: 6px; font-size: 14px; font-style: italic; opacity: .85; }
+    /* 🔊 speak buttons */
+    .vspeak { margin-top: 12px; background: rgba(255,255,255,.2); border: none; color: #fff; width: 42px; height: 42px;
+      border-radius: 50%; cursor: pointer; font-size: 18px; transition: background .12s; }
+    .vspeak:hover { background: rgba(255,255,255,.34); }
+    .speak-inline { border: none; background: var(--accent-soft); color: var(--accent-2); width: 34px; height: 34px;
+      border-radius: 50%; cursor: pointer; font-size: 15px; vertical-align: middle; margin-left: 8px; }
+    .speak-inline:hover { filter: brightness(1.08); }
     .vhero-prompt { font-size: 26px; font-weight: 800; line-height: 1.35; text-shadow: 0 2px 12px rgba(0,0,0,.55); }
     .vbadge { display: inline-block; padding: 6px 14px; border-radius: 999px; font-size: 12px; font-weight: 800; letter-spacing: .06em; color: #fff; background: rgba(0,0,0,.4); }
     .vbadge.phase-new { background: linear-gradient(135deg, #8e2fd0, #c21f8a); }
@@ -262,6 +269,21 @@
     // underline via <span class="str">, and the accent char itself is dropped.
     const STRESS_RE = /([аеёиоуыэюяАЕЁИОУЫЭЮЯ])́/g;
     const stressHtml = (raw) => esc(raw).replace(STRESS_RE, '<span class="str">$1</span>');
+    // Speak a Russian word out loud (browser TTS, ru-RU voice, no key needed).
+    let RU_VOICE = null;
+    function pickVoice() { try { RU_VOICE = (speechSynthesis.getVoices() || []).find((v) => /ru/i.test(v.lang)) || null; } catch {} }
+    try { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; } catch {}
+    function speak(text) {
+      try {
+        const clean = String(text).replace(/́/g, ''); // drop stress marks before speaking
+        const u = new SpeechSynthesisUtterance(clean);
+        u.lang = 'ru-RU'; u.rate = 0.9; if (RU_VOICE) u.voice = RU_VOICE;
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      } catch {}
+    }
+    // One delegated listener handles every 🔊 button, across re-renders.
+    document.addEventListener('click', (e) => { const b = e.target.closest('[data-speak]'); if (b) { e.stopPropagation(); speak(b.dataset.speak); } });
+    const speakBtn = (ru, cls) => `<button class="${cls}" data-speak="${esc(ru)}" title="Kimondás" aria-label="Kimondás">🔊</button>`;
     // small "befejezett: <pf>" line for verb aspect pairs
     const pfLine = (w) => w.pf ? `<div class="asp"><span class="asp-t">bef.</span> ${stressHtml(w.pf)}</div>` : '';
     const shuffle = (a) => { a = [...a]; for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
@@ -479,10 +501,10 @@
         body = `<div class="flip3d ${s.flipped ? 'is-flipped' : ''}" id="flip"><div class="flip3d-inner">
           <div class="vcard flip3d-face flip3d-front" data-flip>
             <div class="vhero"><div class="vhero-ov"></div><div class="vhero-top"><span class="vbadge phase-new">ÚJ SZÓ</span></div>
-              <div class="vhero-center"><div class="vhero-word">${stressHtml(disp(w))}</div>${w.pf ? `<div class="vhero-pf"><b>bef.</b> ${stressHtml(w.pf)}</div>` : ''}${w.pos ? `<div class="vhero-pos">${esc(w.pos)}</div>` : ''}</div></div>
+              <div class="vhero-center"><div class="vhero-word">${stressHtml(disp(w))}</div>${w.pf ? `<div class="vhero-pf"><b>bef.</b> ${stressHtml(w.pf)}</div>` : ''}${w.pos ? `<div class="vhero-pos">${esc(w.pos)}</div>` : ''}<div>${speakBtn(w.ru, 'vspeak')}</div></div></div>
             <div class="vpanel center-text"><div class="flip-hint">koppints a megfordításhoz</div></div></div>
           <div class="vcard flip3d-face flip3d-back" data-flip>
-            <div class="vhero"><div class="vhero-ov"></div><div class="vhero-center"><div class="vhero-word">${stressHtml(disp(w))}</div></div></div>
+            <div class="vhero"><div class="vhero-ov"></div><div class="vhero-center"><div class="vhero-word">${stressHtml(disp(w))}</div><div>${speakBtn(w.ru, 'vspeak')}</div></div></div>
             <div class="vpanel"><div class="vdef">${esc(w.hu)}</div>${w.pf ? `<p class="mean-pf"><b>bef.</b> ${stressHtml(w.pf)}</p>` : ''}${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
               <div class="actions"><button class="btn ghost" id="know">👍 Már tudom</button><button class="btn" id="learn">📚 Tanulom</button></div></div></div>
         </div></div>`;
@@ -497,7 +519,7 @@
           return `<button class="${cls}" data-opt="${esc(o)}" ${ans ? 'disabled' : ''}>${text}</button>`; }).join('');
         body = `<div class="vcard">
           <div class="vhero"><div class="vhero-ov"></div><div class="vhero-top"><span class="vbadge phase-${phase}">${done}/2</span></div>
-            <div class="vhero-center">${isChoose ? `<div class="vhero-word">${stressHtml(disp(w))}</div>` : `<div class="vhero-prompt">${esc(w.hu)}</div>`}</div></div>
+            <div class="vhero-center">${isChoose ? `<div class="vhero-word">${stressHtml(disp(w))}</div><div>${speakBtn(w.ru, 'vspeak')}</div>` : `<div class="vhero-prompt">${esc(w.hu)}</div>`}</div></div>
           <div class="vpanel"><div class="ex-q">${isChoose ? 'Mit jelent ez a szó?' : 'Melyik ez oroszul?'}</div>
             <div class="opt-grid">${opts}</div></div></div>`;
       }
@@ -527,7 +549,7 @@
       const ov = document.createElement('div'); ov.className = 'peek-overlay';
       ov.innerHTML = `<div class="peek-card">
         <div class="peek-scroll">
-          <div class="flash-word">${stressHtml(disp(w))}</div>
+          <div class="flash-word">${stressHtml(disp(w))} ${speakBtn(w.ru, 'speak-inline')}</div>
           ${w.pf ? `<div class="peek-pf"><b>bef.</b> ${stressHtml(w.pf)}</div>` : ''}
           <div class="flash-hu">${esc(w.hu)}</div>
           <div class="peek-pos">${esc(w.pos || '')} · ${esc(w.level)}</div>
