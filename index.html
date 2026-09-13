@@ -572,8 +572,10 @@
       const ps = ov.querySelector('#pstudy');
       ps.addEventListener('click', () => { ov.remove(); state.tab = 'learn'; buildStudy([w.ru]); });
 
+      const hasServer = /^(localhost|127\.0\.0\.1|\[?::1\]?)$/.test(location.hostname);
       pm.addEventListener('click', async () => {
         if (loaded) { box.hidden = !box.hidden; pm.textContent = box.hidden ? '✨ Tudj meg többet' : '▲ Kevesebb'; return; }
+        if (!hasServer) { box.hidden = false; box.innerHTML = '<div class="vdet"><p style="color:var(--sub)">A „Tudj meg többet" csak a helyi szerverrel megy (node server.js) — a weboldalon nem elérhető.</p></div>'; return; }
         pm.disabled = true; pm.textContent = '⏳ Töltés…'; box.hidden = false;
         box.innerHTML = '<div class="vdet"><p style="color:var(--sub)">Kérdezem az AI-t…</p></div>';
         try {
