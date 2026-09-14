@@ -257,8 +257,8 @@
     .opt-btn:disabled { cursor: default; }
     .opt-btn.correct { border-color: #2f9e5f; background: color-mix(in srgb, #2f9e5f 18%, var(--surface)); font-weight: 800; }
     .opt-btn.wrong { border-color: #d1544e; background: color-mix(in srgb, #d1544e 16%, var(--surface)); }
-    /* Simple, robust flip: swap faces (no 3D — avoids mobile mirroring/backface bugs). */
-    .flip3d-inner { position: relative; }
+    /* Robust flip: horizontal collapse → swap face → expand (no 3D backface = no mobile mirroring). */
+    .flip3d-inner { position: relative; transition: transform .16s ease; transform-origin: center; }
     .flip3d-face { cursor: pointer; }
     .flip3d-back { display: none; }
     .flip3d.is-flipped .flip3d-front { display: none; }
@@ -604,7 +604,12 @@
       bindSubtabs();
       if (!s.group) bindStudyLevel();
       if (stage === 'flashcard') {
-        $app.querySelectorAll('[data-flip]').forEach((el) => el.addEventListener('click', (e) => { if (e.target.closest('button')) return; s.flipped = !s.flipped; document.getElementById('flip').classList.toggle('is-flipped', s.flipped); }));
+        $app.querySelectorAll('[data-flip]').forEach((el) => el.addEventListener('click', (e) => {
+          if (e.target.closest('button')) return;
+          const card = document.getElementById('flip'); const inner = card.querySelector('.flip3d-inner');
+          inner.style.transform = 'scaleX(0)'; // collapse
+          setTimeout(() => { s.flipped = !s.flipped; card.classList.toggle('is-flipped', s.flipped); inner.style.transform = 'scaleX(1)'; }, 150); // swap face + expand
+        }));
         const kb = document.getElementById('know'); if (kb) kb.addEventListener('click', () => decide(false));
         const lb = document.getElementById('learn'); if (lb) lb.addEventListener('click', () => decide(true));
         armSwipe();
