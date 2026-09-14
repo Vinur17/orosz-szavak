@@ -274,6 +274,8 @@
   <div class="wrap" id="app"></div>
 
   <script src="data.js?v=10"></script>
+  <!-- Cloud sync (cross-device profiles). Supabase publishable key — safe for public clients. -->
+  <script>window.RU_SYNC = { url: 'https://xoitcnupxuzpnkdlryiz.supabase.co', key: 'sb_publishable_1Jb7uguywYbXkIiULUPpfg_OIpxNJKN' };</script>
   <script>
     // ---------- helpers ----------
     const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -354,10 +356,12 @@
       if (!SYNC) return;
       try {
         const r = await fetch(SYNC.url + '/rest/v1/sync?id=eq.profiles&select=data', { headers: syncHeaders() });
-        if (!r.ok) return;
-        const rows = await r.json(); const remote = rows && rows[0] && rows[0].data && rows[0].data.profiles;
-        if (remote) { mergeProfiles(remote); saveDB(); if (!PROF && DB.active && DB.profiles[DB.active]) useProfile(DB.active); render(); }
+        if (r.ok) {
+          const rows = await r.json(); const remote = rows && rows[0] && rows[0].data && rows[0].data.profiles;
+          if (remote) { mergeProfiles(remote); saveDB(); if (!PROF && DB.active && DB.profiles[DB.active]) useProfile(DB.active); render(); }
+        }
       } catch {}
+      syncPush(); // upload/converge local profiles to the cloud
     }
     function syncPush() {
       if (!SYNC) return;
