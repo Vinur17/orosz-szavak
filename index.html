@@ -329,20 +329,56 @@
     }
     let PROF = null;   // active profile object
     let PROG = {};     // active profile's progress (by reference into DB)
-    function saveProg() { saveDB(); }
+    function saveProg() { touch(); saveDB(); syncPush(); }
     const statusOf = (ru) => (PROG[ru]?.status || 'untouched');
     function setWord(ru, patch) { PROG[ru] = { ...(PROG[ru] || { status: 'untouched', stages: [] }), ...patch }; saveProg(); }
+    // Light PIN hash (obfuscation only — a shared store can't keep a 4-digit PIN truly secret).
+    function hashPin(s) { let h = 5381; s = String(s); for (let i = 0; i < s.length; i++) h = ((h << 5) + h + s.charCodeAt(i)) >>> 0; return 'h' + h.toString(36); }
+    function touch() { if (PROF) { PROF.updatedAt = Date.now(); } }
     function useProfile(id) { if (!DB.profiles[id]) return; DB.active = id; PROF = DB.profiles[id]; if (!PROF.prog) PROF.prog = {}; PROG = PROF.prog; state.level = PROF.level || 'all'; state.gate = false; saveDB(); }
-    function newProfile(name, level) { const id = 'p' + Date.now(); DB.profiles[id] = { name: name || 'Profil', level: level || 'all', prog: {} }; saveDB(); return id; }
+    function newProfile(name, level, pin) { const id = 'p' + Date.now(); DB.profiles[id] = { name: name || 'Profil', level: level || 'all', pin: pin ? hashPin(pin) : '', prog: {}, updatedAt: Date.now() }; saveDB(); syncPush(); return id; }
+
+    // ---------- optional cloud sync (cross-device) ----------
+    // Enable by defining window.RU_SYNC = { url: '<supabase-url>', key: '<anon-key>' } before this script.
+    // Table `sync`(id text primary key, data jsonb). Merges profiles by updatedAt; no config = local only.
+    const SYNC = (window.RU_SYNC && window.RU_SYNC.url && window.RU_SYNC.key) ? window.RU_SYNC : null;
+    let syncTimer = null;
+    const syncHeaders = () => ({ apikey: SYNC.key, Authorization: 'Bearer ' + SYNC.key, 'Content-Type': 'application/json' });
+    function mergeProfiles(remote) {
+      for (const [id, rp] of Object.entries(remote || {})) {
+        const lp = DB.profiles[id];
+        if (!lp || (rp.updatedAt || 0) > (lp.updatedAt || 0)) DB.profiles[id] = rp;
+      }
+    }
+    async function syncPull() {
+      if (!SYNC) return;
+      try {
+        const r = await fetch(SYNC.url + '/rest/v1/sync?id=eq.profiles&select=data', { headers: syncHeaders() });
+        if (!r.ok) return;
+        const rows = await r.json(); const remote = rows && rows[0] && rows[0].data && rows[0].data.profiles;
+        if (remote) { mergeProfiles(remote); saveDB(); if (!PROF && DB.active && DB.profiles[DB.active]) useProfile(DB.active); render(); }
+      } catch {}
+    }
+    function syncPush() {
+      if (!SYNC) return;
+      clearTimeout(syncTimer);
+      syncTimer = setTimeout(() => {
+        fetch(SYNC.url + '/rest/v1/sync?on_conflict=id', {
+          method: 'POST', headers: { ...syncHeaders(), Prefer: 'resolution=merge-duplicates' },
+          body: JSON.stringify({ id: 'profiles', data: { profiles: DB.profiles } }),
+        }).catch(() => {});
+      }, 800);
+    }
 
     // ---------- state ----------
     const state = { tab: 'learn', wQuery: '', groupDetail: null,
       level: 'all',     // active profile's level ('all' or A1..C2)
       gate: false,      // true = show the profile picker
-      newName: '', newLevel: 'all', // new-profile form
+      newName: '', newLevel: 'all', newPin: '', // new-profile form
+      pinFor: null, pinErr: false, // PIN dialog for a locked profile
       study: null };
     // Set my level for the active profile, remember it, refresh study + view.
-    function setLevel(lv) { state.level = lv; if (PROF) { PROF.level = lv; saveDB(); } buildStudy(); }
+    function setLevel(lv) { state.level = lv; if (PROF) { PROF.level = lv; touch(); saveDB(); syncPush(); } buildStudy(); }
     // Activate the saved profile, or show the picker.
     if (DB.active && DB.profiles[DB.active]) useProfile(DB.active); else state.gate = true;
 
@@ -638,37 +674,62 @@
       const profs = Object.entries(DB.profiles);
       const learned = (p) => Object.values(p.prog || {}).filter((x) => x.status === 'known').length;
       const cards = profs.map(([id, p]) => `<button class="prof-card" data-use="${id}">
-        <span class="prof-av">👤</span>
+        <span class="prof-av">${p.pin ? '🔒' : '👤'}</span>
         <span class="prof-main"><b>${esc(p.name)}</b><small>Szint: ${p.level === 'all' ? 'Mind' : esc(p.level)} · ${learned(p)} megtanult</small></span>
         <span class="prof-del" data-del="${id}" title="Törlés">🗑</span></button>`).join('');
       const lchip = (lv, l) => `<button class="lvl-chip ${state.newLevel === lv ? 'sel' : ''}" data-nl="${lv}"><b>${l}</b></button>`;
+      const dialog = (state.pinFor && DB.profiles[state.pinFor]) ? `
+        <div class="peek-overlay" id="pinov"><div class="peek-card" style="max-width:340px">
+          <div class="flash-word" style="font-size:22px">🔒 ${esc(DB.profiles[state.pinFor].name)}</div>
+          <p class="sub" style="margin:6px 0 12px">Add meg a PIN-kódot.</p>
+          <input id="pinin" class="prof-input" inputmode="numeric" maxlength="8" placeholder="PIN" style="text-align:center;letter-spacing:.3em">
+          ${state.pinErr ? '<p style="color:#e5484d;margin:8px 0 0">Hibás PIN.</p>' : ''}
+          <div class="peek-actions"><button class="btn" id="pinok">Belépés</button><button class="btn ghost" id="pincancel">Mégse</button></div>
+        </div></div>` : '';
       $app.innerHTML = `<div class="gate">
-        <div class="page-head" style="text-align:center"><h1>🇷🇺 Ki tanul?</h1><p class="sub">Válassz egy profilt, vagy hozz létre újat. Nincs jelszó.</p></div>
+        <div class="page-head" style="text-align:center"><h1>🇷🇺 Ki tanul?</h1><p class="sub">Válassz egy profilt, vagy hozz létre újat. A profilt PIN-kód védi.</p></div>
         ${profs.length ? `<div class="prof-list">${cards}</div><div class="sec-h" style="text-align:center;font-size:15px">— vagy —</div>` : ''}
         <div class="prof-new card" style="padding:18px">
           <b>Új profil</b>
           <input id="pn" class="prof-input" placeholder="Név (pl. Szergej)" maxlength="24" value="${esc(state.newName)}" autocomplete="off">
           <div class="count" style="margin:10px 0 4px">Szint:</div>
           <div class="lvl-row" style="justify-content:flex-start">${lchip('all', 'Mind') + LEVELS.map((lv) => lchip(lv, lv)).join('')}</div>
+          <div class="count" style="margin:10px 0 4px">PIN-kód (ezzel lépsz be más eszközön is):</div>
+          <input id="ppin" class="prof-input" inputmode="numeric" maxlength="8" placeholder="pl. 1234" value="${esc(state.newPin)}" autocomplete="off">
           <button class="btn" id="pcreate" style="margin-top:14px;width:100%">Profil létrehozása</button>
-        </div></div>`;
+        </div></div>${dialog}`;
       $app.querySelectorAll('[data-use]').forEach((b) => b.addEventListener('click', (e) => {
         if (e.target.closest('[data-del]')) return;
-        useProfile(b.dataset.use); state.tab = 'learn'; buildStudy();
+        const id = b.dataset.use; const p = DB.profiles[id];
+        if (p.pin) { state.pinFor = id; state.pinErr = false; render(); }
+        else { useProfile(id); state.tab = 'learn'; buildStudy(); }
       }));
       $app.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', (e) => {
         e.stopPropagation(); const id = b.dataset.del;
         if (!confirm('Biztos törlöd ezt a profilt? A haladása elvész.')) return;
         delete DB.profiles[id]; if (DB.active === id) { DB.active = null; PROF = null; }
-        saveDB(); render();
+        saveDB(); syncPush(); render();
       }));
       const pn = $app.querySelector('#pn'); if (pn) pn.addEventListener('input', (e) => { state.newName = e.target.value; });
+      const ppin = $app.querySelector('#ppin'); if (ppin) ppin.addEventListener('input', (e) => { state.newPin = e.target.value.replace(/\D/g, ''); });
       $app.querySelectorAll('[data-nl]').forEach((b) => b.addEventListener('click', () => { state.newLevel = b.dataset.nl; render(); }));
       const pc = $app.querySelector('#pcreate'); if (pc) pc.addEventListener('click', () => {
         const name = (state.newName || '').trim(); if (!name) { const el = $app.querySelector('#pn'); if (el) el.focus(); return; }
-        const id = newProfile(name, state.newLevel); state.newName = ''; state.newLevel = 'all';
+        const pin = (state.newPin || '').trim(); if (pin.length < 3) { alert('Adj meg legalább 3 számjegyű PIN-kódot.'); const el = $app.querySelector('#ppin'); if (el) el.focus(); return; }
+        const id = newProfile(name, state.newLevel, pin); state.newName = ''; state.newLevel = 'all'; state.newPin = '';
         useProfile(id); state.tab = 'learn'; buildStudy();
       });
+      const pinov = $app.querySelector('#pinov');
+      if (pinov) {
+        const din = $app.querySelector('#pinin'); if (din) din.focus();
+        const submit = () => { const val = (($app.querySelector('#pinin') || {}).value || '').trim(); const p = DB.profiles[state.pinFor];
+          if (p && hashPin(val) === p.pin) { const id = state.pinFor; state.pinFor = null; state.pinErr = false; useProfile(id); state.tab = 'learn'; buildStudy(); }
+          else { state.pinErr = true; render(); } };
+        const ok = $app.querySelector('#pinok'); if (ok) ok.addEventListener('click', submit);
+        if (din) din.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+        const cancel = $app.querySelector('#pincancel'); if (cancel) cancel.addEventListener('click', () => { state.pinFor = null; state.pinErr = false; render(); });
+        pinov.addEventListener('click', (e) => { if (e.target === pinov) { state.pinFor = null; render(); } });
+      }
     }
     function render() {
       if (!PROF || state.gate) return renderGate();
@@ -714,6 +775,7 @@
     // ---------- boot ----------
     if (PROF) buildStudy(); // prepares a session for the active profile
     render();
+    syncPull(); // pull cloud profiles if sync is configured (no-op otherwise)
   </script>
 </body>
 </html>
