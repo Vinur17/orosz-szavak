@@ -257,12 +257,12 @@
     .opt-btn:disabled { cursor: default; }
     .opt-btn.correct { border-color: #2f9e5f; background: color-mix(in srgb, #2f9e5f 18%, var(--surface)); font-weight: 800; }
     .opt-btn.wrong { border-color: #d1544e; background: color-mix(in srgb, #d1544e 16%, var(--surface)); }
-    .flip3d { perspective: 1600px; }
-    .flip3d-inner { position: relative; transform-style: preserve-3d; transition: transform .55s cubic-bezier(.4, .15, .2, 1); }
-    .flip3d.is-flipped .flip3d-inner { transform: rotateY(180deg); }
-    .flip3d-face { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
-    .flip3d-front { position: absolute; inset: 0; cursor: pointer; }
-    .flip3d-back { transform: rotateY(180deg); }
+    /* Simple, robust flip: swap faces (no 3D — avoids mobile mirroring/backface bugs). */
+    .flip3d-inner { position: relative; }
+    .flip3d-face { cursor: pointer; }
+    .flip3d-back { display: none; }
+    .flip3d.is-flipped .flip3d-front { display: none; }
+    .flip3d.is-flipped .flip3d-back { display: block; }
     .study { max-width: 480px; margin: 0 auto; }
 
     .empty { text-align: center; padding: 60px 20px; color: var(--sub); }
