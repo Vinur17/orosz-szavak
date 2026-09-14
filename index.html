@@ -311,6 +311,12 @@
     const BY_RU = Object.fromEntries(WORDS.map((w) => [w.ru, w]));
     const GROUPS = window.RU_GROUPS || [];
 
+    // ---------- appearance / theme (per-device) ----------
+    let THEME = 'auto'; try { THEME = localStorage.getItem('ru_theme') || 'auto'; } catch {}
+    function applyTheme(t) { THEME = t; try { localStorage.setItem('ru_theme', t); } catch {}
+      const r = document.documentElement; if (t === 'auto') r.removeAttribute('data-theme'); else r.setAttribute('data-theme', t); }
+    applyTheme(THEME);
+
     // ---------- profiles + progress (localStorage) ----------
     // Each profile remembers its OWN learned words (prog) and level. No password.
     const DBKEY = 'ru_profiles_v1';
@@ -378,6 +384,7 @@
     const state = { tab: 'learn', wQuery: '', groupDetail: null,
       level: 'all',     // active profile's level ('all' or A1..C2)
       gate: false,      // true = show the profile picker
+      settings: false,  // true = show the settings screen
       newName: '', newLevel: 'all', newPin: '', // new-profile form
       pinFor: null, pinErr: false, // PIN dialog for a locked profile
       study: null };
@@ -392,12 +399,13 @@
     const V_SUB = 'Kép nélkül is: hangsúly, folyamatos/befejezett igepár, példamondat és ismétlés.';
     function chromeTop() {
       const tb = (id, l) => `<button class="subtab ${state.tab === id ? 'sel' : ''}" data-tab="${id}">${l}</button>`;
-      const prof = `<div class="prof-bar"><button class="prof-btn" data-gate="1" title="Profilváltás">👤 ${esc(PROF ? PROF.name : 'Profil')} · ${state.level === 'all' ? 'Mind' : esc(state.level)}</button></div>`;
+      const prof = `<div class="prof-bar"><button class="prof-btn" data-settings="1" title="Beállítások">⚙️</button><button class="prof-btn" data-gate="1" title="Profilváltás">👤 ${esc(PROF ? PROF.name : 'Profil')} · ${state.level === 'all' ? 'Mind' : esc(state.level)}</button></div>`;
       return `${prof}<div class="page-head"><h1>${V_TITLE}</h1><p class="sub">${V_SUB}</p></div>
         <div class="subtabs">${tb('learn', 'Tanulás')}${tb('groups', 'Csoportok')}${tb('words', 'Szavak')}</div>`;
     }
     function bindSubtabs() {
       const g = $app.querySelector('.prof-btn[data-gate]'); if (g) g.addEventListener('click', () => { state.gate = true; render(); });
+      const st = $app.querySelector('.prof-btn[data-settings]'); if (st) st.addEventListener('click', () => { state.settings = true; render(); });
       $app.querySelectorAll('.subtab[data-tab]').forEach((b) => b.addEventListener('click', () => {
         state.tab = b.dataset.tab; state.groupDetail = null;
         if (b.dataset.tab === 'learn' && !state.study) buildStudy(); else render();
@@ -740,8 +748,50 @@
         pinov.addEventListener('click', (e) => { if (e.target === pinov) { state.pinFor = null; render(); } });
       }
     }
+    // ---------- settings ----------
+    function renderSettings() {
+      const lchip = (lv, l) => `<button class="lvl-chip ${state.level === lv ? 'sel' : ''}" data-slv2="${lv}"><b>${l}</b></button>`;
+      const tchip = (t, l) => `<button class="lvl-chip ${THEME === t ? 'sel' : ''}" data-th="${t}"><b>${l}</b></button>`;
+      $app.innerHTML = chromeTop() + `<div class="gate">
+        <div style="margin-bottom:6px"><span class="link" id="sback">← Vissza</span></div>
+        <h1 style="font-size:24px">⚙️ Beállítások</h1>
+        <div class="card" style="padding:16px;margin-top:12px">
+          <b>Név</b>
+          <div style="display:flex;gap:8px;margin-top:8px"><input id="sname" class="prof-input" maxlength="24" value="${esc(PROF.name)}" autocomplete="off"><button class="btn" id="ssave">Mentés</button></div>
+        </div>
+        <div class="card" style="padding:16px;margin-top:12px">
+          <b>Szint</b>
+          <div class="lvl-row" style="justify-content:flex-start;margin-top:8px">${lchip('all', 'Mind') + LEVELS.map((lv) => lchip(lv, lv)).join('')}</div>
+        </div>
+        <div class="card" style="padding:16px;margin-top:12px">
+          <b>PIN-kód módosítása</b>
+          <div style="display:flex;gap:8px;margin-top:8px"><input id="spin" class="prof-input" inputmode="numeric" maxlength="8" placeholder="új PIN (min. 3 számjegy)" autocomplete="off"><button class="btn" id="spinsave">Mentés</button></div>
+          <p class="sub" id="spinmsg" style="margin:8px 0 0"></p>
+        </div>
+        <div class="card" style="padding:16px;margin-top:12px">
+          <b>Kinézet</b>
+          <div class="lvl-row" style="justify-content:flex-start;margin-top:8px">${tchip('auto', 'Rendszer') + tchip('light', 'Világos') + tchip('dark', 'Sötét')}</div>
+        </div>
+        <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap">
+          <button class="btn ghost" id="sswitch">👤 Profilváltás</button>
+          <button class="btn ghost" id="sdelete" style="color:#e5484d;border-color:#e5484d">🗑 Profil törlése</button>
+        </div>
+      </div>`;
+      bindSubtabs();
+      $app.querySelector('#sback').addEventListener('click', () => { state.settings = false; render(); });
+      $app.querySelector('#ssave').addEventListener('click', () => { const v = ($app.querySelector('#sname').value || '').trim(); if (v) { PROF.name = v; touch(); saveDB(); syncPush(); render(); } });
+      $app.querySelectorAll('[data-slv2]').forEach((b) => b.addEventListener('click', () => { state.level = b.dataset.slv2; if (PROF) { PROF.level = state.level; touch(); saveDB(); syncPush(); } state.settings = true; buildStudy(); }));
+      $app.querySelector('#spinsave').addEventListener('click', () => { const v = ($app.querySelector('#spin').value || '').replace(/\D/g, ''); const msg = $app.querySelector('#spinmsg');
+        if (v.length < 3) { msg.textContent = 'Legalább 3 számjegyű PIN kell.'; msg.style.color = '#e5484d'; return; }
+        PROF.pin = hashPin(v); touch(); saveDB(); syncPush(); $app.querySelector('#spin').value = ''; msg.textContent = 'PIN elmentve ✓'; msg.style.color = 'var(--accent-2)'; });
+      $app.querySelectorAll('[data-th]').forEach((b) => b.addEventListener('click', () => { applyTheme(b.dataset.th); render(); }));
+      $app.querySelector('#sswitch').addEventListener('click', () => { state.settings = false; state.gate = true; render(); });
+      $app.querySelector('#sdelete').addEventListener('click', () => { if (!confirm('Biztos törlöd ezt a profilt? A haladás elvész.')) return;
+        const id = DB.active; delete DB.profiles[id]; DB.active = null; PROF = null; saveDB(); syncPush(); state.settings = false; state.gate = true; render(); });
+    }
     function render() {
       if (!PROF || state.gate) return renderGate();
+      if (state.settings) return renderSettings();
       if (state.tab === 'words') renderWords();
       else if (state.tab === 'groups') renderGroups();
       else renderLearn();
