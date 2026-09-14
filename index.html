@@ -48,6 +48,22 @@
       background: transparent; border: none; cursor: pointer; font-family: var(--font); transition: background .12s, color .12s; }
     .subtab:hover { color: var(--ink); }
     .subtab.sel { background: var(--accent); color: var(--accent-ink); }
+    /* Profile bar + picker ("login") */
+    .prof-bar { display: flex; justify-content: flex-end; margin-bottom: 8px; }
+    .prof-btn { background: var(--surface-2); border: 1px solid var(--line); color: var(--ink); font: inherit; font-weight: 700;
+      font-size: 13px; padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+    .prof-btn:hover { border-color: var(--accent); }
+    .gate { max-width: 460px; margin: 0 auto; }
+    .prof-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 6px; }
+    .prof-card { display: flex; align-items: center; gap: 12px; text-align: left; background: var(--surface); border: 1px solid var(--line);
+      border-radius: 16px; padding: 14px 16px; cursor: pointer; transition: border-color .12s, transform .12s; }
+    .prof-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .prof-av { font-size: 24px; width: 46px; height: 46px; display: grid; place-items: center; background: var(--accent-soft); border-radius: 50%; flex: none; }
+    .prof-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+    .prof-main b { font-size: 17px; } .prof-main small { color: var(--sub); font-size: 12px; }
+    .prof-del { opacity: .4; font-size: 16px; padding: 4px; border-radius: 8px; } .prof-del:hover { opacity: 1; }
+    .prof-input { width: 100%; border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 12px; padding: 11px 14px; font: inherit; color: var(--ink); outline: none; }
+    .prof-input:focus { border-color: var(--accent); }
     .btn { border: 0; background: var(--accent); color: #fff; font: inherit; font-weight: 700;
       border-radius: 12px; padding: 11px 16px; cursor: pointer; }
     .btn.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); }
@@ -257,7 +273,7 @@
 <body>
   <div class="wrap" id="app"></div>
 
-  <script src="data.js?v=7"></script>
+  <script src="data.js?v=8"></script>
   <script>
     // ---------- helpers ----------
     const LEVELS = ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'];
@@ -293,23 +309,42 @@
     const BY_RU = Object.fromEntries(WORDS.map((w) => [w.ru, w]));
     const GROUPS = window.RU_GROUPS || [];
 
-    // ---------- progress (localStorage) ----------
-    const PKEY = 'ru_progress_v1';
-    let PROG = {};
-    try { PROG = JSON.parse(localStorage.getItem(PKEY) || '{}') || {}; } catch { PROG = {}; }
-    function saveProg() { try { localStorage.setItem(PKEY, JSON.stringify(PROG)); } catch {} }
+    // ---------- profiles + progress (localStorage) ----------
+    // Each profile remembers its OWN learned words (prog) and level. No password.
+    const DBKEY = 'ru_profiles_v1';
+    let DB = { profiles: {}, active: null };
+    try { DB = JSON.parse(localStorage.getItem(DBKEY) || 'null') || { profiles: {}, active: null }; } catch { DB = { profiles: {}, active: null }; }
+    if (!DB.profiles) DB.profiles = {};
+    function saveDB() { try { localStorage.setItem(DBKEY, JSON.stringify(DB)); } catch {} }
+    // One-time migration: fold the old single-user data into a first profile.
+    if (!Object.keys(DB.profiles).length) {
+      let oldProg = null, oldLevel = null;
+      try { oldProg = JSON.parse(localStorage.getItem('ru_progress_v1') || 'null'); } catch {}
+      try { oldLevel = localStorage.getItem('ru_mylevel') || localStorage.getItem('ru_slevel'); } catch {}
+      if (oldProg && Object.keys(oldProg).length) {
+        const id = 'p' + Date.now();
+        DB.profiles[id] = { name: 'Az én profilom', level: oldLevel || 'all', prog: oldProg };
+        DB.active = id; saveDB();
+      }
+    }
+    let PROF = null;   // active profile object
+    let PROG = {};     // active profile's progress (by reference into DB)
+    function saveProg() { saveDB(); }
     const statusOf = (ru) => (PROG[ru]?.status || 'untouched');
     function setWord(ru, patch) { PROG[ru] = { ...(PROG[ru] || { status: 'untouched', stages: [] }), ...patch }; saveProg(); }
+    function useProfile(id) { if (!DB.profiles[id]) return; DB.active = id; PROF = DB.profiles[id]; if (!PROF.prog) PROF.prog = {}; PROG = PROF.prog; state.level = PROF.level || 'all'; state.gate = false; saveDB(); }
+    function newProfile(name, level) { const id = 'p' + Date.now(); DB.profiles[id] = { name: name || 'Profil', level: level || 'all', prog: {} }; saveDB(); return id; }
 
     // ---------- state ----------
-    // ONE remembered level ("Szintem") used everywhere: study, Words, Groups.
-    let level0 = 'all';
-    try { level0 = localStorage.getItem('ru_mylevel') || localStorage.getItem('ru_slevel') || 'all'; } catch {}
     const state = { tab: 'learn', wQuery: '', groupDetail: null,
-      level: level0, // 'all' or A1..C2 — persisted, shared by all tabs
+      level: 'all',     // active profile's level ('all' or A1..C2)
+      gate: false,      // true = show the profile picker
+      newName: '', newLevel: 'all', // new-profile form
       study: null };
-    // Set my level, remember it, and refresh the study queue + current view.
-    function setLevel(lv) { state.level = lv; try { localStorage.setItem('ru_mylevel', lv); } catch {} buildStudy(); }
+    // Set my level for the active profile, remember it, refresh study + view.
+    function setLevel(lv) { state.level = lv; if (PROF) { PROF.level = lv; saveDB(); } buildStudy(); }
+    // Activate the saved profile, or show the picker.
+    if (DB.active && DB.profiles[DB.active]) useProfile(DB.active); else state.gate = true;
 
     const $app = document.getElementById('app');
     // Page header + centered pill tabs (Tanulás / Csoportok / Szavak) — like Languru.
@@ -317,10 +352,12 @@
     const V_SUB = 'Kép nélkül is: hangsúly, folyamatos/befejezett igepár, példamondat és ismétlés.';
     function chromeTop() {
       const tb = (id, l) => `<button class="subtab ${state.tab === id ? 'sel' : ''}" data-tab="${id}">${l}</button>`;
-      return `<div class="page-head"><h1>${V_TITLE}</h1><p class="sub">${V_SUB}</p></div>
+      const prof = `<div class="prof-bar"><button class="prof-btn" data-gate="1" title="Profilváltás">👤 ${esc(PROF ? PROF.name : 'Profil')} · ${state.level === 'all' ? 'Mind' : esc(state.level)}</button></div>`;
+      return `${prof}<div class="page-head"><h1>${V_TITLE}</h1><p class="sub">${V_SUB}</p></div>
         <div class="subtabs">${tb('learn', 'Tanulás')}${tb('groups', 'Csoportok')}${tb('words', 'Szavak')}</div>`;
     }
     function bindSubtabs() {
+      const g = $app.querySelector('.prof-btn[data-gate]'); if (g) g.addEventListener('click', () => { state.gate = true; render(); });
       $app.querySelectorAll('.subtab[data-tab]').forEach((b) => b.addEventListener('click', () => {
         state.tab = b.dataset.tab; state.groupDetail = null;
         if (b.dataset.tab === 'learn' && !state.study) buildStudy(); else render();
@@ -596,7 +633,45 @@
       });
     }
 
+    // ---------- profile picker ("login") ----------
+    function renderGate() {
+      const profs = Object.entries(DB.profiles);
+      const learned = (p) => Object.values(p.prog || {}).filter((x) => x.status === 'known').length;
+      const cards = profs.map(([id, p]) => `<button class="prof-card" data-use="${id}">
+        <span class="prof-av">👤</span>
+        <span class="prof-main"><b>${esc(p.name)}</b><small>Szint: ${p.level === 'all' ? 'Mind' : esc(p.level)} · ${learned(p)} megtanult</small></span>
+        <span class="prof-del" data-del="${id}" title="Törlés">🗑</span></button>`).join('');
+      const lchip = (lv, l) => `<button class="lvl-chip ${state.newLevel === lv ? 'sel' : ''}" data-nl="${lv}"><b>${l}</b></button>`;
+      $app.innerHTML = `<div class="gate">
+        <div class="page-head" style="text-align:center"><h1>🇷🇺 Ki tanul?</h1><p class="sub">Válassz egy profilt, vagy hozz létre újat. Nincs jelszó.</p></div>
+        ${profs.length ? `<div class="prof-list">${cards}</div><div class="sec-h" style="text-align:center;font-size:15px">— vagy —</div>` : ''}
+        <div class="prof-new card" style="padding:18px">
+          <b>Új profil</b>
+          <input id="pn" class="prof-input" placeholder="Név (pl. Szergej)" maxlength="24" value="${esc(state.newName)}" autocomplete="off">
+          <div class="count" style="margin:10px 0 4px">Szint:</div>
+          <div class="lvl-row" style="justify-content:flex-start">${lchip('all', 'Mind') + LEVELS.map((lv) => lchip(lv, lv)).join('')}</div>
+          <button class="btn" id="pcreate" style="margin-top:14px;width:100%">Profil létrehozása</button>
+        </div></div>`;
+      $app.querySelectorAll('[data-use]').forEach((b) => b.addEventListener('click', (e) => {
+        if (e.target.closest('[data-del]')) return;
+        useProfile(b.dataset.use); state.tab = 'learn'; buildStudy();
+      }));
+      $app.querySelectorAll('[data-del]').forEach((b) => b.addEventListener('click', (e) => {
+        e.stopPropagation(); const id = b.dataset.del;
+        if (!confirm('Biztos törlöd ezt a profilt? A haladása elvész.')) return;
+        delete DB.profiles[id]; if (DB.active === id) { DB.active = null; PROF = null; }
+        saveDB(); render();
+      }));
+      const pn = $app.querySelector('#pn'); if (pn) pn.addEventListener('input', (e) => { state.newName = e.target.value; });
+      $app.querySelectorAll('[data-nl]').forEach((b) => b.addEventListener('click', () => { state.newLevel = b.dataset.nl; render(); }));
+      const pc = $app.querySelector('#pcreate'); if (pc) pc.addEventListener('click', () => {
+        const name = (state.newName || '').trim(); if (!name) { const el = $app.querySelector('#pn'); if (el) el.focus(); return; }
+        const id = newProfile(name, state.newLevel); state.newName = ''; state.newLevel = 'all';
+        useProfile(id); state.tab = 'learn'; buildStudy();
+      });
+    }
     function render() {
+      if (!PROF || state.gate) return renderGate();
       if (state.tab === 'words') renderWords();
       else if (state.tab === 'groups') renderGroups();
       else renderLearn();
@@ -637,7 +712,7 @@
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { const ov = document.querySelector('.peek-overlay'); if (ov) ov.remove(); } });
 
     // ---------- boot ----------
-    buildStudy(); // prepares a session
+    if (PROF) buildStudy(); // prepares a session for the active profile
     render();
   </script>
 </body>
