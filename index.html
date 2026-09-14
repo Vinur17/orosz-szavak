@@ -257,6 +257,25 @@
     .opt-btn:disabled { cursor: default; }
     .opt-btn.correct { border-color: #2f9e5f; background: color-mix(in srgb, #2f9e5f 18%, var(--surface)); font-weight: 800; }
     .opt-btn.wrong { border-color: #d1544e; background: color-mix(in srgb, #d1544e 16%, var(--surface)); }
+    /* Typed answer stages (translate / write / cloze) + Cyrillic keyboard */
+    .type-row { display: flex; gap: 8px; margin-top: 12px; }
+    .type-in { flex: 1; min-width: 0; border: 1.5px solid var(--line); background: var(--surface-2); border-radius: 12px;
+      padding: 12px 14px; font: inherit; font-size: 18px; color: var(--ink); outline: none; text-align: center; }
+    .type-in:focus { border-color: var(--accent); }
+    .cyr-kbd { margin-top: 10px; display: flex; flex-direction: column; gap: 6px; }
+    .cyr-row { display: flex; gap: 5px; justify-content: center; }
+    .cyr-key { flex: 1 1 0; min-width: 0; padding: 11px 0; border: 1px solid var(--line); background: var(--surface-2);
+      border-radius: 8px; font: inherit; font-size: 17px; color: var(--ink); cursor: pointer; }
+    .cyr-key:hover { border-color: var(--accent); background: var(--accent-soft); }
+    .cyr-key.wide { flex: 4 1 0; font-size: 13px; }
+    .hint-row { display: flex; gap: 5px; justify-content: center; margin: 12px 0 4px; flex-wrap: wrap; }
+    .hm-tile { display: inline-block; min-width: 20px; height: 28px; line-height: 28px; border-bottom: 2px solid var(--sub);
+      text-align: center; font-weight: 800; font-size: 19px; color: var(--accent-2); }
+    .hm-tile.filled { border-bottom-color: var(--accent); }
+    .hm-gap { display: inline-block; width: 14px; }
+    .type-result { text-align: center; font-size: 18px; margin-top: 14px; }
+    .type-result.ok { color: var(--accent-2); } .type-result.bad { color: #e5484d; }
+    .cloze-gap { color: var(--accent); font-weight: 800; letter-spacing: 2px; }
     /* Robust flip: horizontal collapse → swap face → expand (no 3D backface = no mobile mirroring). */
     .flip3d-inner { position: relative; transition: transform .16s ease; transform-origin: center; }
     .flip3d-face { cursor: pointer; }
@@ -413,14 +432,39 @@
     }
 
     // ---------- study engine ----------
-    const EX = ['choose', 'reverse']; // both must pass -> known
+    // Exercise types (like Languru): choose/reverse = multiple choice; translate/write/cloze = typed.
+    const REQUIRED = 2; // distinct exercises to pass -> word becomes "known"
+    const TYPED = ['translate', 'write', 'cloze'];
+    function availableEx(w) {
+      const list = ['choose', 'reverse', 'translate', 'write'];
+      if (w && w.ex && w.ex.includes(w.ru)) list.push('cloze'); // gap only when the exact word is in the sentence
+      return list;
+    }
+    function passedCount(w) { const p = PROG[w.ru]; const av = availableEx(w); return (p?.stages || []).filter((x) => av.includes(x)).length; }
     function pickStage(ru) {
       const p = PROG[ru];
       if (!p || p.status === 'untouched' || (p.status === 'new' && !(p.stages || []).includes('intro'))) return 'flashcard';
-      const done = p.stages || [];
-      const left = EX.filter((e) => !done.includes(e));
+      const w = BY_RU[ru]; const av = availableEx(w);
+      const left = av.filter((e) => !(p.stages || []).includes(e));
       return left.length ? left[Math.floor(Math.random() * left.length)] : 'choose';
     }
+    // Answer normalization + checking for typed stages.
+    const normRu = (s) => strip(s).replace(/[.,!?;:()»«"„”'’\-–—]/g, '').replace(/\s+/g, ' ').trim();
+    const normHu = (s) => String(s).toLowerCase().replace(/[.,!?;:()»«"„”'’]/g, ' ').replace(/\s+/g, ' ').trim();
+    function isCorrectTyped(stage, w, val) {
+      if (!val || !val.trim()) return false;
+      if (stage === 'write') { // typed Hungarian meaning
+        const v = normHu(val); const hu = normHu(w.hu);
+        if (v === hu) return true;
+        const parts = String(w.hu).split(/[\/;,·]/).map(normHu).filter(Boolean);
+        if (parts.includes(v)) return true;
+        if (v.length >= 4 && hu.split(' ').includes(v)) return true;
+        return false;
+      }
+      return normRu(val) === normRu(w.ru); // translate / cloze -> the Russian word
+    }
+    // Cyrillic on-screen keyboard (Hungarian keyboards can't type Cyrillic).
+    const CYR_ROWS = ['йцукенгшщзхъ', 'фывапролджэ', 'ячсмитьбюё'];
     function buildStudy(pool) {
       // pool: array of ru for a GROUP session (studies exactly those, any level);
       // otherwise a normal session drawn from the remembered level (state.level).
@@ -442,29 +486,34 @@
       const pool = shuffle(WORDS.filter((w) => w.ru !== word.ru)).slice(0, 3).map((w) => w[key]);
       return shuffle([word[key], ...pool]);
     }
-    function reset(s) { s.flipped = false; s.answered = null; s._opts = null; s._optsFor = null; }
+    function reset(s) { s.flipped = false; s.answered = null; s._opts = null; s._optsFor = null; s._hint = 0; s._hinted = false; }
     function rotate() { const s = state.study; s.queue.push(s.queue.shift()); reset(s); render(); }
     function finishWord() { const s = state.study; s.queue.shift(); s.learned++; reset(s); render(); }
 
     function decide(learn) {
       const ru = curRu();
       if (learn) { setWord(ru, { status: 'new', stages: ['intro'] }); rotate(); }
-      else { setWord(ru, { status: 'known', stages: ['intro', ...EX] }); toast('Már tudod ✓'); finishWord(); }
+      else { setWord(ru, { status: 'known', stages: ['intro', 'choose', 'reverse'] }); toast('Már tudod ✓'); finishWord(); }
     }
-    function answer(stage, choice, word) {
-      const correct = stage === 'choose' ? choice === word.hu : choice === word.ru;
-      state.study.answered = { choice, correct, stage };
+    // Record a correct/incorrect answer (works for both MC choice and typed input).
+    function grade(stage, word, correct, meta) {
+      state.study.answered = { correct, stage, ...(meta || {}) };
       if (correct) {
         const p = PROG[word.ru] || { status: 'learning', stages: ['intro'] };
         const stages = Array.from(new Set([...(p.stages || ['intro']), stage]));
-        const status = EX.every((e) => stages.includes(e)) ? 'known' : 'learning';
+        const status = stages.filter((x) => availableEx(word).includes(x)).length >= REQUIRED ? 'known' : 'learning';
         setWord(word.ru, { status, stages });
         render();
-        setTimeout(() => { if (status === 'known') { toast('Megtanultad! 🎉'); finishWord(); } else rotate(); }, 750);
+        setTimeout(() => { if (status === 'known') { toast('Megtanultad! 🎉'); finishWord(); } else rotate(); }, 800);
       } else {
         render();
-        setTimeout(() => rotate(), 1400);
+        setTimeout(() => rotate(), 1600);
       }
+    }
+    function answer(stage, choice, word) { grade(stage, word, stage === 'choose' ? choice === word.hu : choice === word.ru, { choice }); }
+    function answerTyped(stage, word) {
+      const el = document.getElementById('typein'); const val = el ? el.value : '';
+      grade(stage, word, isCorrectTyped(stage, word, val), { typed: val, hinted: !!state.study._hinted });
     }
 
     function toast(msg) {
@@ -576,7 +625,7 @@
       }
       const s = state.study; const ru = curRu(); const w = BY_RU[ru];
       const stage = s.answered ? s.answered.stage : pickStage(ru); // keep the answered card visible
-      const p = PROG[ru]; const done = (p?.stages || []).filter((x) => EX.includes(x)).length;
+      const done = passedCount(w);
       const phase = statusOf(ru) === 'untouched' ? 'new' : statusOf(ru);
       const head = `${bar}<div class="flash-progress">
         <span>📚 ${s.learned} / ${s.total}</span>
@@ -593,7 +642,7 @@
             <div class="vpanel"><div class="vdef">${esc(w.hu)}</div>${w.pf ? `<p class="mean-pf"><b>bef.</b> ${stressHtml(w.pf)}</p>` : ''}${w.ex ? `<div class="vex">„${esc(w.ex)}"<span>${esc(w.exHu || '')}</span></div>` : ''}
               <div class="actions"><button class="btn ghost" id="know">👍 Már tudom</button><button class="btn" id="learn">📚 Tanulom</button></div></div></div>
         </div></div>`;
-      } else {
+      } else if (stage === 'choose' || stage === 'reverse') {
         const isChoose = stage === 'choose';
         const key = isChoose ? 'hu' : 'ru';
         if (!s._opts || s._optsFor !== ru + stage) { s._opts = options(w, key); s._optsFor = ru + stage; }
@@ -607,6 +656,30 @@
             <div class="vhero-center">${isChoose ? `<div class="vhero-word">${stressHtml(disp(w))}</div><div>${speakBtn(w.ru, 'vspeak')}</div>` : `<div class="vhero-prompt">${esc(w.hu)}</div>`}</div></div>
           <div class="vpanel"><div class="ex-q">${isChoose ? 'Mit jelent ez a szó?' : 'Melyik ez oroszul?'}</div>
             <div class="opt-grid">${opts}</div></div></div>`;
+      } else {
+        // typed stages: translate (type RU), write (type HU meaning), cloze (type RU in the gap)
+        const ans = s.answered; const ruAnswer = stage !== 'write';
+        const answerStr = stage === 'write' ? String(w.hu).split(/[\/;,·]/)[0].trim() : w.ru;
+        let heroInner;
+        if (stage === 'translate') heroInner = `<div class="vhero-prompt">${esc(w.hu)}</div>`;
+        else if (stage === 'write') heroInner = `<div class="vhero-word">${stressHtml(disp(w))}</div><div>${speakBtn(w.ru, 'vspeak')}</div>`;
+        else heroInner = `<div class="vhero-prompt sm">„${esc(w.ex).split(esc(w.ru)).join('<span class="cloze-gap">_____</span>')}"</div>`;
+        const q = stage === 'write' ? 'Írd le a jelentését (magyarul):' : stage === 'cloze' ? 'Melyik szó hiányzik? (oroszul)' : 'Hogy van oroszul? Írd be:';
+        const hintRow = s._hint > 0 ? `<div class="hint-row">${hintMask(answerStr, s._hint)}</div>` : '';
+        let bottom;
+        if (ans) {
+          const okmark = ans.correct ? (ans.hinted ? '✅💡' : '✅') : '❌';
+          const corr = ans.correct ? '' : ` — helyes: <b>${ruAnswer ? stressHtml(disp(w)) : esc(answerStr)}</b>`;
+          bottom = `<div class="type-result ${ans.correct ? 'ok' : 'bad'}">${okmark} <b>${esc(ans.typed || '(üres)')}</b>${corr}</div>`;
+        } else {
+          bottom = `<div class="type-row"><input id="typein" class="type-in" placeholder="Írd be…" autocomplete="off" autocapitalize="none" spellcheck="false" ${ruAnswer ? 'readonly' : ''} value="${esc(s._input || '')}"><button class="btn" id="typeok">OK</button></div>
+            ${ruAnswer ? cyrKbd() : ''}
+            <div class="center-text" style="margin-top:8px"><span class="link" id="hintlink">💡 Kérek egy betűt</span></div>`;
+        }
+        body = `<div class="vcard">
+          <div class="vhero"><div class="vhero-ov"></div><div class="vhero-top"><span class="vbadge phase-${phase}">${done}/2</span></div>
+            <div class="vhero-center">${heroInner}</div></div>
+          <div class="vpanel"><div class="ex-q">${q}</div>${hintRow}${bottom}</div></div>`;
       }
       $app.innerHTML = chromeTop() + `<div class="study">${head}${body}</div>`;
       bindSubtabs();
@@ -621,9 +694,25 @@
         const kb = document.getElementById('know'); if (kb) kb.addEventListener('click', () => decide(false));
         const lb = document.getElementById('learn'); if (lb) lb.addEventListener('click', () => decide(true));
         armSwipe();
-      } else {
+      } else if (stage === 'choose' || stage === 'reverse') {
         $app.querySelectorAll('[data-opt]').forEach((b) => b.addEventListener('click', () => answer(stage, b.dataset.opt, w)));
+      } else if (!s.answered) {
+        const inEl = document.getElementById('typein'); if (inEl && stage === 'write') inEl.focus();
+        const submit = () => { if (inEl) s._input = inEl.value; answerTyped(stage, w); };
+        const okB = document.getElementById('typeok'); if (okB) okB.addEventListener('click', submit);
+        if (inEl) inEl.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+        $app.querySelectorAll('[data-k]').forEach((b) => b.addEventListener('click', () => { if (inEl) { inEl.value += b.dataset.k; } }));
+        const bk = document.getElementById('kbksp'); if (bk) bk.addEventListener('click', () => { if (inEl) inEl.value = inEl.value.slice(0, -1); });
+        const sp = document.getElementById('kspace'); if (sp) sp.addEventListener('click', () => { if (inEl) inEl.value += ' '; });
+        const hl = document.getElementById('hintlink'); if (hl) hl.addEventListener('click', () => { if (inEl) s._input = inEl.value; s._hint = (s._hint || 0) + 1; s._hinted = true; render(); });
       }
+    }
+    function hintMask(ans, n) {
+      return [...String(ans)].map((c, i) => c === ' ' ? '<span class="hm-gap"></span>' : `<span class="hm-tile ${i < n ? 'filled' : ''}">${i < n ? esc(c) : ''}</span>`).join('');
+    }
+    function cyrKbd() {
+      const rows = CYR_ROWS.map((r) => `<div class="cyr-row">${[...r].map((ch) => `<button class="cyr-key" data-k="${ch}" tabindex="-1">${ch}</button>`).join('')}</div>`).join('');
+      return `<div class="cyr-kbd">${rows}<div class="cyr-row"><button class="cyr-key wide" id="kspace" tabindex="-1">szóköz</button><button class="cyr-key" id="kbksp" tabindex="-1">⌫</button></div></div>`;
     }
 
     // Optional grammar detail block (conjugation, past, government, grammar, nuance).
